@@ -57,7 +57,8 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
                                shapedQueryExpression,
                                methodCallExpression.Arguments.Count == 2
                                    ? UnwrapLambdaFromQuoteExpression(methodCallExpression.Arguments[1])
-                                   : null);
+                                   : null,
+                               methodCallExpression.Type);
 
                         case nameof(Queryable.Cast):
                             return TranslateCast(shapedQueryExpression, methodCallExpression.Method.GetGenericArguments()[0]);
@@ -268,7 +269,8 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
                                shapedQueryExpression,
                                methodCallExpression.Arguments.Count == 2
                                    ? UnwrapLambdaFromQuoteExpression(methodCallExpression.Arguments[1])
-                                   : null);
+                                   : null,
+                               methodCallExpression.Type);
 
                         case nameof(Queryable.Min):
                             shapedQueryExpression.ResultType = ResultType.Single;
@@ -276,7 +278,8 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
                                shapedQueryExpression,
                                methodCallExpression.Arguments.Count == 2
                                    ? UnwrapLambdaFromQuoteExpression(methodCallExpression.Arguments[1])
-                                   : null);
+                                   : null,
+                               methodCallExpression.Type);
 
                         case nameof(Queryable.OfType):
                             return TranslateOfType(shapedQueryExpression, methodCallExpression.Method.GetGenericArguments()[0]);
@@ -349,7 +352,8 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
                                shapedQueryExpression,
                                methodCallExpression.Arguments.Count == 2
                                    ? UnwrapLambdaFromQuoteExpression(methodCallExpression.Arguments[1])
-                                   : null);
+                                   : null,
+                               methodCallExpression.Type);
 
                         case nameof(Queryable.Take):
                             return TranslateTake(shapedQueryExpression, methodCallExpression.Arguments[1]);
@@ -409,7 +413,7 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
 
         protected abstract ShapedQueryExpression TranslateAll(ShapedQueryExpression source, LambdaExpression predicate);
         protected abstract ShapedQueryExpression TranslateAny(ShapedQueryExpression source, LambdaExpression predicate);
-        protected abstract ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector);
+        protected abstract ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector, Type resultType);
         protected abstract ShapedQueryExpression TranslateCast(ShapedQueryExpression source, Type resultType);
         protected abstract ShapedQueryExpression TranslateConcat(ShapedQueryExpression source1, ShapedQueryExpression source2);
         protected abstract ShapedQueryExpression TranslateContains(ShapedQueryExpression source, Expression item);
@@ -425,8 +429,8 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
         protected abstract ShapedQueryExpression TranslateJoin(ShapedQueryExpression outer, ShapedQueryExpression inner, LambdaExpression outerKeySelector, LambdaExpression innerKeySelector, LambdaExpression resultSelector);
         protected abstract ShapedQueryExpression TranslateLastOrDefault(ShapedQueryExpression source, LambdaExpression predicate, bool returnDefault);
         protected abstract ShapedQueryExpression TranslateLongCount(ShapedQueryExpression source, LambdaExpression predicate);
-        protected abstract ShapedQueryExpression TranslateMax(ShapedQueryExpression source, LambdaExpression selector);
-        protected abstract ShapedQueryExpression TranslateMin(ShapedQueryExpression source, LambdaExpression selector);
+        protected abstract ShapedQueryExpression TranslateMax(ShapedQueryExpression source, LambdaExpression selector, Type resultType);
+        protected abstract ShapedQueryExpression TranslateMin(ShapedQueryExpression source, LambdaExpression selector, Type resultType);
         protected abstract ShapedQueryExpression TranslateOfType(ShapedQueryExpression source, Type resultType);
         protected abstract ShapedQueryExpression TranslateOrderBy(ShapedQueryExpression source, LambdaExpression keySelector, bool ascending);
         protected abstract ShapedQueryExpression TranslateReverse(ShapedQueryExpression source);
@@ -436,7 +440,7 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
         protected abstract ShapedQueryExpression TranslateSingleOrDefault(ShapedQueryExpression source, LambdaExpression predicate, bool returnDefault);
         protected abstract ShapedQueryExpression TranslateSkip(ShapedQueryExpression source, Expression count);
         protected abstract ShapedQueryExpression TranslateSkipWhile(ShapedQueryExpression source, LambdaExpression predicate);
-        protected abstract ShapedQueryExpression TranslateSum(ShapedQueryExpression source, LambdaExpression selector);
+        protected abstract ShapedQueryExpression TranslateSum(ShapedQueryExpression source, LambdaExpression selector, Type resultType);
         protected abstract ShapedQueryExpression TranslateTake(ShapedQueryExpression source, Expression count);
         protected abstract ShapedQueryExpression TranslateTakeWhile(ShapedQueryExpression source, LambdaExpression predicate);
         protected abstract ShapedQueryExpression TranslateThenBy(ShapedQueryExpression source, LambdaExpression keySelector, bool ascending);

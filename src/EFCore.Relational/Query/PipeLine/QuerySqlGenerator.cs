@@ -188,11 +188,20 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override Expression VisitSqlBinary(SqlBinaryExpression sqlBinaryExpression)
         {
-            Visit(sqlBinaryExpression.Left);
-
-            _relationalCommandBuilder.Append(_operatorMap[sqlBinaryExpression.OperatorType]);
-
-            Visit(sqlBinaryExpression.Right);
+            if (sqlBinaryExpression.OperatorType == ExpressionType.Coalesce)
+            {
+                    _relationalCommandBuilder.Append("COALESCE(");
+                    Visit(sqlBinaryExpression.Left);
+                    _relationalCommandBuilder.Append(", ");
+                    Visit(sqlBinaryExpression.Right);
+                    _relationalCommandBuilder.Append(")");
+            }
+            else
+            {
+                Visit(sqlBinaryExpression.Left);
+                _relationalCommandBuilder.Append(_operatorMap[sqlBinaryExpression.OperatorType]);
+                Visit(sqlBinaryExpression.Right);
+            }
 
             return sqlBinaryExpression;
         }

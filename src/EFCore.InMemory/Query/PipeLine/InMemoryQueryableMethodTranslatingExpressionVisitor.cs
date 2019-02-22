@@ -59,7 +59,7 @@ namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
             return source;
         }
 
-        protected override ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector)
+        protected override ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
             => TranslateScalarAggregate(source, selector, nameof(Enumerable.Average));
 
         protected override ShapedQueryExpression TranslateCast(ShapedQueryExpression source, Type resultType) => throw new NotImplementedException();
@@ -192,10 +192,10 @@ namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
             return source;
         }
 
-        protected override ShapedQueryExpression TranslateMax(ShapedQueryExpression source, LambdaExpression selector)
+        protected override ShapedQueryExpression TranslateMax(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
             => TranslateScalarAggregate(source, selector, nameof(Enumerable.Max));
 
-        protected override ShapedQueryExpression TranslateMin(ShapedQueryExpression source, LambdaExpression selector)
+        protected override ShapedQueryExpression TranslateMin(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
             => TranslateScalarAggregate(source, selector, nameof(Enumerable.Min));
 
         protected override ShapedQueryExpression TranslateOfType(ShapedQueryExpression source, Type resultType) => throw new NotImplementedException();
@@ -269,7 +269,7 @@ namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
 
         protected override ShapedQueryExpression TranslateSkipWhile(ShapedQueryExpression source, LambdaExpression predicate) => throw new NotImplementedException();
 
-        protected override ShapedQueryExpression TranslateSum(ShapedQueryExpression source, LambdaExpression selector)
+        protected override ShapedQueryExpression TranslateSum(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
             => TranslateScalarAggregate(source, selector, nameof(Enumerable.Sum));
 
         protected override ShapedQueryExpression TranslateTake(ShapedQueryExpression source, Expression count)

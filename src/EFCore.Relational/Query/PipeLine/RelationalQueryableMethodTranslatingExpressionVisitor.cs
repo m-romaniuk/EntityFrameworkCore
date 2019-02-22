@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Query.PipeLine;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -79,7 +80,57 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             return source;
         }
 
-        protected override ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector) => throw new NotImplementedException();
+        protected override ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
+        {
+            if (selector != null)
+            {
+                source = TranslateSelect(source, selector);
+            }
+
+            var projection = (SqlExpression)((SelectExpression)source.QueryExpression)
+                .GetProjectionExpression(new ProjectionMember());
+
+            var inputType = projection.Type.UnwrapNullableType();
+            if (inputType == typeof(int)
+                || inputType == typeof(long))
+            {
+                projection = new SqlCastExpression(projection, typeof(double), _typeMappingSource.FindMapping(typeof(double)));
+            }
+
+            if (projection.Type.UnwrapNullableType() == typeof(float))
+            {
+                projection = new SqlCastExpression(
+                    new SqlFunctionExpression(
+                        null,
+                        "AVG",
+                        null,
+                        new[]
+                        {
+                            projection
+                        },
+                        typeof(double),
+                        _typeMappingSource.FindMapping(typeof(double)),
+                        false),
+                    projection.Type,
+                    projection.TypeMapping);
+            }
+            else
+            {
+                projection = new SqlFunctionExpression(
+                    null,
+                    "AVG",
+                    null,
+                    new[]
+                    {
+                        projection
+                    },
+                    projection.Type,
+                    projection.TypeMapping,
+                    false);
+            }
+
+            return AggregateResultShaper(source, projection, throwOnNullResult: true, resultType);
+        }
 
         protected override ShapedQueryExpression TranslateCast(ShapedQueryExpression source, Type resultType) => throw new NotImplementedException();
 
@@ -183,9 +234,55 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override ShapedQueryExpression TranslateLongCount(ShapedQueryExpression source, LambdaExpression predicate) => throw new NotImplementedException();
 
-        protected override ShapedQueryExpression TranslateMax(ShapedQueryExpression source, LambdaExpression selector) => throw new NotImplementedException();
+        protected override ShapedQueryExpression TranslateMax(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
+        {
+            if (selector != null)
+            {
+                source = TranslateSelect(source, selector);
+            }
 
-        protected override ShapedQueryExpression TranslateMin(ShapedQueryExpression source, LambdaExpression selector) => throw new NotImplementedException();
+            var projection = (SqlExpression)((SelectExpression)source.QueryExpression)
+                .GetProjectionExpression(new ProjectionMember());
+
+            projection = new SqlFunctionExpression(
+                null,
+                "MAX",
+                null,
+                new[]
+                {
+                    projection
+                },
+                resultType,
+                projection.TypeMapping,
+                false);
+
+            return AggregateResultShaper(source, projection, throwOnNullResult: true, resultType);
+        }
+
+        protected override ShapedQueryExpression TranslateMin(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
+        {
+            if (selector != null)
+            {
+                source = TranslateSelect(source, selector);
+            }
+
+            var projection = (SqlExpression)((SelectExpression)source.QueryExpression)
+                .GetProjectionExpression(new ProjectionMember());
+
+            projection = new SqlFunctionExpression(
+                null,
+                "MIN",
+                null,
+                new[]
+                {
+                    projection
+                },
+                resultType,
+                projection.TypeMapping,
+                false);
+
+            return AggregateResultShaper(source, projection, throwOnNullResult: true, resultType);
+        }
 
         protected override ShapedQueryExpression TranslateOfType(ShapedQueryExpression source, Type resultType) => throw new NotImplementedException();
 
@@ -265,7 +362,51 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override ShapedQueryExpression TranslateSkipWhile(ShapedQueryExpression source, LambdaExpression predicate) => throw new NotImplementedException();
 
-        protected override ShapedQueryExpression TranslateSum(ShapedQueryExpression source, LambdaExpression selector) => throw new NotImplementedException();
+        protected override ShapedQueryExpression TranslateSum(ShapedQueryExpression source, LambdaExpression selector, Type resultType)
+        {
+            if (selector != null)
+            {
+                source = TranslateSelect(source, selector);
+            }
+
+            var serverOutputType = resultType.UnwrapNullableType();
+            var projection = (SqlExpression)((SelectExpression)source.QueryExpression)
+                .GetProjectionExpression(new ProjectionMember());
+
+            if (serverOutputType == typeof(float))
+            {
+                projection = new SqlCastExpression(
+                    new SqlFunctionExpression(
+                        null,
+                        "SUM",
+                        null,
+                        new[]
+                        {
+                            projection
+                        },
+                        typeof(double),
+                        _typeMappingSource.FindMapping(typeof(double)),
+                        false),
+                    serverOutputType,
+                    projection.TypeMapping);
+            }
+            else
+            {
+                projection = new SqlFunctionExpression(
+                    null,
+                    "SUM",
+                    null,
+                    new[]
+                    {
+                        projection
+                    },
+                    serverOutputType,
+                    projection.TypeMapping,
+                    false);
+            }
+
+            return AggregateResultShaper(source, projection, throwOnNullResult: false, resultType);
+        }
 
         protected override ShapedQueryExpression TranslateTake(ShapedQueryExpression source, Expression count)
         {
@@ -330,6 +471,51 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             var lambdaBody = new ReplacingExpressionVisitor(parameterBindings).Visit(lambdaExpression.Body);
 
             return TranslateExpression((SelectExpression)shapedQueryExpression.QueryExpression, lambdaBody, condition);
+        }
+
+        private ShapedQueryExpression AggregateResultShaper(
+            ShapedQueryExpression source, Expression projection, bool throwOnNullResult, Type resultType)
+        {
+            var selectExpression = (SelectExpression)source.QueryExpression;
+            selectExpression.ApplyProjection(
+                new Dictionary<ProjectionMember, Expression>
+                {
+                    { new ProjectionMember(), projection }
+                });
+
+            Expression shaper = new ProjectionBindingExpression(selectExpression, new ProjectionMember(), projection.Type);
+
+            if (throwOnNullResult)
+            {
+                var resultVariable = Expression.Variable(projection.Type, "result");
+
+                shaper = Expression.Block(
+                    new[] { resultVariable },
+                    Expression.Assign(resultVariable, shaper),
+                    Expression.Condition(
+                        Expression.Equal(resultVariable, Expression.Default(projection.Type)),
+                        Expression.Throw(
+                            Expression.New(
+                                typeof(InvalidOperationException).GetConstructors()
+                                    .Single(ci => ci.GetParameters().Length == 1),
+                                Expression.Constant(RelationalStrings.NoElements)),
+                            projection.Type),
+                        resultVariable),
+                    resultType != resultVariable.Type
+                    ? Expression.Convert(resultVariable, resultType)
+                    : (Expression)resultVariable);
+            }
+            else if (resultType.IsNullableType())
+            {
+                shaper = Expression.Convert(shaper, resultType);
+            }
+
+            source.ShaperExpression
+                = Expression.Lambda(
+                    shaper,
+                    source.ShaperExpression.Parameters);
+
+            return source;
         }
     }
 }

@@ -71,7 +71,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             if (typeMapping == null)
             {
-                throw new InvalidOperationException("TypeMapping should not be null.");
+                return sqlCastExpression;
             }
 
             var operand = ApplyTypeMapping(
