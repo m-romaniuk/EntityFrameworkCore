@@ -32,7 +32,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             _methodCallTranslatorProvider = methodCallTranslatorProvider;
         }
 
-        public SqlExpression Translate(SelectExpression selectExpression, Expression expression, bool condition)
+        public SqlExpression Translate(SelectExpression selectExpression, Expression expression)
         {
             _selectExpression = selectExpression;
 
@@ -40,8 +40,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
             _selectExpression = null;
 
-            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
-                translation, _typeMappingSource.FindMapping(expression.Type), condition);
+            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(translation, _typeMappingSource.FindMapping(expression.Type));
         }
 
         protected override Expression VisitMember(MemberExpression memberExpression)
@@ -58,8 +57,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
                 _memberTranslatorProvider.Translate(
                     (SqlExpression)innerExpression, memberExpression.Member, memberExpression.Type),
-                null,
-                false);
+                null);
         }
 
         protected override Expression VisitMethodCall(MethodCallExpression methodCallExpression)
@@ -84,8 +82,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
             return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
                 _methodCallTranslatorProvider.Translate(@object, methodCallExpression.Method, arguments),
-                null,
-                false);
+                null);
         }
 
         private static readonly MethodInfo _stringConcatObjectMethodInfo
@@ -104,7 +101,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                     || _stringConcatStringMethodInfo.Equals(binaryExpression.Method)))
             {
                 return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
-                    _methodCallTranslatorProvider.Translate(null, binaryExpression.Method, new[] { left, right }), null, false);
+                    _methodCallTranslatorProvider.Translate(null, binaryExpression.Method, new[] { left, right }), null);
             }
 
             var newExpression = new SqlBinaryExpression(
@@ -112,17 +109,16 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 left,
                 right,
                 binaryExpression.Type,
-                null,
-                false);
+                null);
 
-            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(newExpression, null, false);
+            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(newExpression, null);
         }
 
         protected override Expression VisitConstant(ConstantExpression constantExpression)
-            => new SqlConstantExpression(constantExpression, null, false);
+            => new SqlConstantExpression(constantExpression, null);
 
         protected override Expression VisitParameter(ParameterExpression parameterExpression)
-            => new SqlParameterExpression(parameterExpression, null, false);
+            => new SqlParameterExpression(parameterExpression, null);
 
 
         protected override Expression VisitExtension(Expression extensionExpression)
@@ -139,6 +135,24 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             return base.VisitExtension(extensionExpression);
+        }
+
+        protected override Expression VisitConditional(ConditionalExpression conditionalExpression)
+        {
+            var test = (SqlExpression)Visit(conditionalExpression.Test);
+            var ifTrue = (SqlExpression)Visit(conditionalExpression.IfTrue);
+            var ifFalse = (SqlExpression)Visit(conditionalExpression.IfFalse);
+
+            var newExpression = new CaseExpression(
+                new[]
+                {
+                    new CaseWhenClause(test, ifTrue)
+                },
+                ifFalse,
+                conditionalExpression.Type,
+                null);
+
+            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(newExpression, null);
         }
 
         //protected override Expression VisitNew(NewExpression newExpression)
@@ -188,18 +202,17 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 }
 
                 sqlOperand = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
-                        sqlOperand, _typeMappingSource.FindMapping(sqlOperand.Type), false);
+                        sqlOperand, _typeMappingSource.FindMapping(sqlOperand.Type));
 
                 return new SqlCastExpression(
                     sqlOperand,
                     unaryExpression.Type,
-                    null,
-                    false);
+                    null);
             }
 
             if (unaryExpression.NodeType == ExpressionType.Not)
             {
-                return new SqlNotExpression(sqlOperand, typeof(bool), _typeMappingSource.FindMapping(typeof(bool)), true);
+                return new SqlNotExpression(sqlOperand, _typeMappingSource.FindMapping(typeof(bool)));
             }
 
             return null;

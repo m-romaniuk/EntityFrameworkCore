@@ -943,7 +943,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 os => os.Where(o => o.CustomerID == "FRANK").Take(5).Distinct());
         }
 
-        [ConditionalTheory(Skip = "TaskList#4")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Any_simple(bool isAsync)
         {
@@ -970,7 +970,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 os => os.Take(5).OrderBy(o => o.OrderID));
         }
 
-        [ConditionalTheory(Skip = "TaskList#4")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Any_predicate(bool isAsync)
         {
@@ -1054,7 +1054,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory(Skip = "TaskList#4")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task All_top_level(bool isAsync)
         {
@@ -1064,7 +1064,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 predicate: c => c.ContactName.StartsWith("A"));
         }
 
-        [ConditionalTheory(Skip = "TaskList#4")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task All_top_level_column(bool isAsync)
         {

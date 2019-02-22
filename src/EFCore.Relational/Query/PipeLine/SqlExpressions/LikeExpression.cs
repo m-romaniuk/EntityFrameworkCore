@@ -9,9 +9,17 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 {
     public class LikeExpression : SqlExpression
     {
-        public LikeExpression(SqlExpression match, SqlExpression pattern, SqlExpression escapeChar,
-            Type type, RelationalTypeMapping typeMapping, bool condition)
-            : base(type, typeMapping, condition)
+        public LikeExpression(SqlExpression match, SqlExpression pattern, SqlExpression escapeChar, RelationalTypeMapping typeMapping)
+            : base(typeof(bool), typeMapping, true, false)
+        {
+            Match = match.ConvertToValue(true);
+            Pattern = pattern.ConvertToValue(true);
+            EscapeChar = escapeChar.ConvertToValue(true);
+        }
+
+        private LikeExpression(
+            SqlExpression match, SqlExpression pattern, SqlExpression escapeChar, RelationalTypeMapping typeMapping, bool treatAsValue)
+            : base(typeof(bool), typeMapping, true, treatAsValue)
         {
             Match = match;
             Pattern = pattern;
@@ -25,8 +33,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var escapeChar = (SqlExpression)visitor.Visit(EscapeChar);
 
             return match != Match || pattern != Pattern || escapeChar != EscapeChar
-                ? new LikeExpression(match, pattern, escapeChar, Type, TypeMapping, IsCondition)
+                ? new LikeExpression(match, pattern, escapeChar, TypeMapping)
                 : this;
+        }
+
+        public override SqlExpression ConvertToValue(bool treatAsValue)
+        {
+            return new LikeExpression(Match, Pattern, EscapeChar, TypeMapping, treatAsValue);
         }
 
         public SqlExpression Match { get; }

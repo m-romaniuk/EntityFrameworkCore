@@ -7,8 +7,8 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
     {
         public CaseWhenClause(SqlExpression test, SqlExpression result)
         {
-            Test = test;
-            Result = result;
+            Test = test.ConvertToValue(false);
+            Result = result.ConvertToValue(true);
         }
 
         public SqlExpression Test { get; }

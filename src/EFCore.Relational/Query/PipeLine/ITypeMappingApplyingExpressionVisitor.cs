@@ -8,6 +8,6 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 {
     public interface ITypeMappingApplyingExpressionVisitor
     {
-        SqlExpression ApplyTypeMapping(SqlExpression expression, RelationalTypeMapping typeMapping, bool condition = false);
+        SqlExpression ApplyTypeMapping(SqlExpression expression, RelationalTypeMapping typeMapping);
     }
 }

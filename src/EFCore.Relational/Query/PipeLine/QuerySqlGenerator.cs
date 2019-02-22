@@ -272,7 +272,40 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override Expression VisitCase(CaseExpression caseExpression)
         {
-            throw new NotImplementedException();
+            _relationalCommandBuilder.Append("CASE");
+
+            //if (caseExpression.Operand != null)
+            //{
+            //    _relationalCommandBuilder.Append(" ");
+            //    Visit(caseExpression.Operand);
+            //}
+
+            using (_relationalCommandBuilder.Indent())
+            {
+                foreach (var whenClause in caseExpression.WhenClauses)
+                {
+                    _relationalCommandBuilder
+                        .AppendLine()
+                        .Append("WHEN ");
+                    Visit(whenClause.Test);
+                    _relationalCommandBuilder.Append(" THEN ");
+                    Visit(whenClause.Result);
+                }
+
+                if (caseExpression.ElseResult != null)
+                {
+                    _relationalCommandBuilder
+                        .AppendLine()
+                        .Append("ELSE ");
+                    Visit(caseExpression.ElseResult);
+                }
+            }
+
+            _relationalCommandBuilder
+                .AppendLine()
+                .Append("END");
+
+            return caseExpression;
         }
 
         protected override Expression VisitSqlCast(SqlCastExpression sqlCastExpression)
@@ -301,6 +334,25 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             _relationalCommandBuilder.Append(sqlNullExpression.Negated ? " IS NOT NULL" : " IS NULL");
 
             return sqlNullExpression;
+        }
+
+        protected override Expression VisitExists(ExistsExpression existsExpression)
+        {
+            if (existsExpression.Negated)
+            {
+                _relationalCommandBuilder.AppendLine("NOT EXISTS (");
+            }
+
+            _relationalCommandBuilder.AppendLine("EXISTS (");
+
+            using (_relationalCommandBuilder.Indent())
+            {
+                Visit(existsExpression.Subquery);
+            }
+
+            _relationalCommandBuilder.Append(")");
+
+            return existsExpression;
         }
     }
 }

@@ -77,8 +77,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                         return new SqlCastExpression(
                             instance,
                             returnType,
-                            null,
-                            false);
+                            null);
 
                     case nameof(DateTime.Now):
                         return new SqlFunctionExpression(
@@ -105,8 +104,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                             : new SqlCastExpression(
                                 serverTranslation,
                                 returnType,
-                                serverTranslation.TypeMapping,
-                                false);
+                                serverTranslation.TypeMapping);
 
                     case nameof(DateTime.Today):
                         return new SqlFunctionExpression(

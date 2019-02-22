@@ -47,12 +47,36 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override ShapedQueryExpression TranslateAny(ShapedQueryExpression source, LambdaExpression predicate)
         {
-            //if (predicate != null)
-            //{
-            //    source = TranslateWhere(source, predicate);
-            //}
+            if (predicate != null)
+            {
+                source = TranslateWhere(source, predicate);
+            }
 
-            throw new InvalidOperationException();
+            var selectExpression = (SelectExpression)source.QueryExpression;
+
+            selectExpression.ApplyProjection(new Dictionary<ProjectionMember, Expression>());
+
+            var translation = new ExistsExpression(
+                selectExpression,
+                false,
+                _typeMappingSource.FindMapping(typeof(bool)))
+                    .ConvertToValue(true);
+
+            var projectionMapping = new Dictionary<ProjectionMember, Expression>
+            {
+                { new ProjectionMember(), translation }
+            };
+
+            source.QueryExpression = new SelectExpression(
+                projectionMapping,
+                new List<TableExpressionBase>());
+
+            source.ShaperExpression
+                = Expression.Lambda(
+                    new ProjectionBindingExpression(source.QueryExpression, new ProjectionMember(), typeof(bool)),
+                    source.ShaperExpression.Parameters);
+
+            return source;
         }
 
         protected override ShapedQueryExpression TranslateAverage(ShapedQueryExpression source, LambdaExpression selector) => throw new NotImplementedException();
@@ -125,8 +149,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             selectExpression.ApplyLimit(
                 new SqlConstantExpression(
                     Expression.Constant(1),
-                    _typeMappingSource.FindMapping(typeof(int)),
-                    false));
+                    _typeMappingSource.FindMapping(typeof(int))));
 
             return source;
         }
@@ -153,8 +176,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             selectExpression.ApplyLimit(
                 new SqlConstantExpression(
                     Expression.Constant(1),
-                    _typeMappingSource.FindMapping(typeof(int)),
-                    false));
+                    _typeMappingSource.FindMapping(typeof(int))));
 
             return source;
         }
@@ -221,8 +243,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             selectExpression.ApplyLimit(
                 new SqlConstantExpression(
                     Expression.Constant(1),
-                    _typeMappingSource.FindMapping(typeof(int)),
-                    false));
+                    _typeMappingSource.FindMapping(typeof(int))));
 
             return source;
         }
@@ -283,7 +304,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             var translation = TranslateLambdaExpression(source, predicate, true);
 
-            if (translation?.IsCondition == true)
+            if (translation != null)
             {
                 ((SelectExpression)source.QueryExpression).ApplyPredicate(translation);
 
@@ -295,7 +316,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         private SqlExpression TranslateExpression(SelectExpression selectExpression, Expression expression, bool condition)
         {
-            return _sqlTranslator.Translate(selectExpression, expression, condition);
+            return _sqlTranslator.Translate(selectExpression, expression)?.ConvertToValue(!condition);
         }
 
         private SqlExpression TranslateLambdaExpression(

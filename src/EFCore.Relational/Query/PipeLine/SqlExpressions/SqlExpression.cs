@@ -9,11 +9,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 {
     public abstract class SqlExpression : Expression
     {
-        protected SqlExpression(Type type, RelationalTypeMapping typeMapping, bool condition)
+        protected SqlExpression(Type type, RelationalTypeMapping typeMapping, bool condition, bool treatAsValue)
         {
             Type = type;
             IsCondition = condition;
             TypeMapping = typeMapping;
+            ShouldBeValue = treatAsValue;
         }
 
         public SqlExpression ApplyTypeMapping(RelationalTypeMapping typeMapping)
@@ -28,16 +29,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             return this;
         }
 
-        public SqlExpression ApplyCondition(bool condition)
-        {
-            IsCondition = condition;
-
-            return this;
-        }
+        public abstract SqlExpression ConvertToValue(bool treatAsValue);
 
         public override ExpressionType NodeType => ExpressionType.Extension;
         public override Type Type { get; }
-        public bool IsCondition { get; private set; }
+        public bool IsCondition { get; }
+        public bool ShouldBeValue { get; }
         public RelationalTypeMapping TypeMapping { get; private set; }
     }
 }

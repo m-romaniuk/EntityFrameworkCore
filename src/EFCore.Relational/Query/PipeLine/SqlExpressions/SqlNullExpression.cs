@@ -13,13 +13,22 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public SqlNullExpression(
             SqlExpression operand,
             bool negated,
-            Type type,
-            RelationalTypeMapping typeMapping,
-            bool condition)
-            : base(type, typeMapping, condition)
+            RelationalTypeMapping typeMapping)
+            : base(typeof(bool), typeMapping, true, false)
         {
             Check.NotNull(operand, nameof(operand));
 
+            Operand = operand.ConvertToValue(true);
+            Negated = negated;
+        }
+
+        private SqlNullExpression(
+            SqlExpression operand,
+            bool negated,
+            RelationalTypeMapping typeMapping,
+            bool treatAsValue)
+            : base(typeof(bool), typeMapping, true, treatAsValue)
+        {
             Operand = operand;
             Negated = negated;
         }
@@ -29,8 +38,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var operand = (SqlExpression)visitor.Visit(Operand);
 
             return operand != Operand
-                ? new SqlNullExpression(operand, Negated, Type, TypeMapping, IsCondition)
+                ? new SqlNullExpression(operand, Negated, TypeMapping)
                 : this;
+        }
+
+        public override SqlExpression ConvertToValue(bool treatAsValue)
+        {
+            return new SqlNullExpression(Operand, Negated, TypeMapping, treatAsValue);
         }
 
         public SqlExpression Operand { get; }

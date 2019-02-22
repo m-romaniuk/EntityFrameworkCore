@@ -33,8 +33,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                         _typeMappingSource.FindMapping(typeof(long)),
                         false),
                     returnType,
-                    _typeMappingSource.FindMapping(returnType),
-                    false);
+                    _typeMappingSource.FindMapping(returnType));
             }
 
             return null;

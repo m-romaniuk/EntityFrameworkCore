@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore.Query.PipeLine;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -85,11 +86,11 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                     ?? _typeMappingSource.FindMapping(arguments[0].Type);
 
                 var newArguments = new SqlExpression[arguments.Count];
-                newArguments[0] = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[0], typeMapping, false);
+                newArguments[0] = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[0], typeMapping);
 
                 if (arguments.Count == 2)
                 {
-                    newArguments[1] = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[1], typeMapping, false);
+                    newArguments[1] = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[1], typeMapping);
                 }
 
                 return new SqlFunctionExpression(
@@ -106,7 +107,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             {
                 var argument = arguments[0];
                 var typeMapping = ExpressionExtensions.InferTypeMapping(argument) ?? _typeMappingSource.FindMapping(arguments[0].Type);
-                argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, typeMapping, false);
+                argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, typeMapping);
 
                 return new SqlFunctionExpression(
                     null,
@@ -126,10 +127,10 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             {
                 var argument = arguments[0];
                 var typeMapping = ExpressionExtensions.InferTypeMapping(argument) ?? _typeMappingSource.FindMapping(arguments[0].Type);
-                argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, typeMapping, false);
+                argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, typeMapping);
 
                 var digits = arguments.Count == 2
-                    ? _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[1], _intTypeMapping, false)
+                    ? _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[1], _intTypeMapping)
                     : MakeSqlConstant(0);
 
                 return new SqlFunctionExpression(
@@ -147,7 +148,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 
         private SqlExpression MakeSqlConstant(int value)
         {
-            return new SqlConstantExpression(Expression.Constant(value), _intTypeMapping, false);
+            return new SqlConstantExpression(Expression.Constant(value), _intTypeMapping);
         }
     }
 }

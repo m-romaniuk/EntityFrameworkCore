@@ -6,13 +6,17 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 {
     public class EqualsTranslator : IMethodCallTranslator
     {
-        public EqualsTranslator()
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+
+        public EqualsTranslator(IRelationalTypeMappingSource typeMappingSource)
         {
+            _typeMappingSource = typeMappingSource;
         }
 
 
@@ -45,12 +49,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                         left,
                         right,
                         typeof(bool),
-                        null,
-                        true);
+                        null);
                 }
                 else
                 {
-                    return new SqlConstantExpression(Expression.Constant(false), null, true);
+                    return new SqlConstantExpression(Expression.Constant(false), _typeMappingSource.FindMapping(typeof(bool)));
                 }
             }
 

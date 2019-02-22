@@ -25,7 +25,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public SqlExpression Offset { get; private set; }
         public bool IsDistinct { get; private set; }
 
-        private SelectExpression(
+        public SelectExpression(
             IDictionary<ProjectionMember, Expression> projectionMapping,
             List<TableExpressionBase> tables)
             : base("")
@@ -81,6 +81,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         public void ApplyPredicate(SqlExpression expression)
         {
+            if (expression is SqlConstantExpression sqlConstant
+                && (bool)sqlConstant.Value)
+            {
+                return;
+            }
+
             if (Predicate == null)
             {
                 Predicate = expression;
@@ -92,8 +98,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
                     Predicate,
                     expression,
                     typeof(bool),
-                    expression.TypeMapping,
-                    true);
+                    expression.TypeMapping);
             }
         }
 
@@ -122,7 +127,10 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         public void ApplyThenBy(OrderingExpression orderingExpression)
         {
-            _orderings.Add(orderingExpression);
+            if (!_orderings.Contains(orderingExpression))
+            {
+                _orderings.Add(orderingExpression);
+            }
         }
 
         public void ApplyLimit(SqlExpression sqlExpression)

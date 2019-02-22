@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -20,7 +21,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         }
 
         public virtual SqlExpression ApplyTypeMapping(
-            SqlExpression expression, RelationalTypeMapping typeMapping, bool condition = false)
+            SqlExpression expression, RelationalTypeMapping typeMapping)
         {
             if (expression == null)
             {
@@ -28,91 +29,108 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             if (expression.TypeMapping != null)
-                // ColumnExpression, SqlNullExpression, SqlNotExpression should be captured here.
+            // ColumnExpression, SqlNullExpression, SqlNotExpression should be captured here.
             {
-                if (expression.IsCondition == condition)
-                {
-                    return expression;
-                }
-
-                return expression.ApplyCondition(condition);
+                return expression;
             }
 
             switch (expression)
             {
                 case CaseExpression caseExpression:
-                    return ApplyTypeMappingOnCase(caseExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnCase(caseExpression, typeMapping);
 
                 case LikeExpression likeExpression:
-                    return ApplyTypeMappingOnLike(likeExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnLike(likeExpression, typeMapping);
 
                 case SqlBinaryExpression sqlBinaryExpression:
-                    return ApplyTypeMappingOnSqlBinary(sqlBinaryExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnSqlBinary(sqlBinaryExpression, typeMapping);
 
                 case SqlCastExpression sqlCastExpression:
-                    return ApplyTypeMappingOnSqlCast(sqlCastExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnSqlCast(sqlCastExpression, typeMapping);
 
                 case SqlConstantExpression sqlConstantExpression:
-                    return ApplyTypeMappingOnSqlConstant(sqlConstantExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnSqlConstant(sqlConstantExpression, typeMapping);
 
                 case SqlFragmentExpression sqlFragmentExpression:
                     return sqlFragmentExpression;
 
                 case SqlFunctionExpression sqlFunctionExpression:
-                    return ApplyTypeMappingOnSqlFunction(sqlFunctionExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnSqlFunction(sqlFunctionExpression, typeMapping);
 
                 case SqlParameterExpression sqlParameterExpression:
-                    return ApplyTypeMappingOnSqlParameter(sqlParameterExpression, typeMapping, condition);
+                    return ApplyTypeMappingOnSqlParameter(sqlParameterExpression, typeMapping);
 
                 default:
-                    return ApplyTypeMappingOnExtension(expression, typeMapping, condition);
+                    return ApplyTypeMappingOnExtension(expression, typeMapping);
 
             }
         }
 
         protected virtual SqlExpression ApplyTypeMappingOnSqlCast(
-            SqlCastExpression sqlCastExpression, RelationalTypeMapping typeMapping, bool condition)
+            SqlCastExpression sqlCastExpression, RelationalTypeMapping typeMapping)
         {
+            if (typeMapping == null)
+            {
+                throw new InvalidOperationException("TypeMapping should not be null.");
+            }
+
             var operand = ApplyTypeMapping(
                 sqlCastExpression.Operand,
-                _typeMappingSource.FindMapping(sqlCastExpression.Operand.Type),
-                false);
+                _typeMappingSource.FindMapping(sqlCastExpression.Operand.Type));
 
             return new SqlCastExpression(
                 operand,
                 sqlCastExpression.Type,
-                typeMapping,
-                condition);
+                typeMapping);
         }
 
         protected virtual SqlExpression ApplyTypeMappingOnCase(
-            CaseExpression caseExpression, RelationalTypeMapping typeMapping, bool condition)
+            CaseExpression caseExpression, RelationalTypeMapping typeMapping)
         {
-            throw new NotImplementedException();
-        }
-
-        protected virtual SqlExpression ApplyTypeMappingOnSqlBinary(
-            SqlBinaryExpression sqlBinaryExpression, RelationalTypeMapping typeMapping, bool condition)
-        {
-            var left = sqlBinaryExpression.Left;
-            var right = sqlBinaryExpression.Right;
-            var inferredTypeMapping = ExpressionExtensions.InferTypeMapping(left, right);
+            var inferredTypeMapping = typeMapping ?? ExpressionExtensions.InferTypeMapping(caseExpression.ElseResult);
 
             if (inferredTypeMapping == null)
             {
-                if (left is SqlCastExpression leftCast)
+                foreach (var caseWhenClause in caseExpression.WhenClauses)
                 {
-                    inferredTypeMapping = _typeMappingSource.FindMapping(left.Type);
-                }
-                else if (right is SqlCastExpression rightCast)
-                {
-                    inferredTypeMapping = _typeMappingSource.FindMapping(right.Type);
-                }
-                else
-                {
-                    return null;
+                    inferredTypeMapping = ExpressionExtensions.InferTypeMapping(caseWhenClause.Result);
+
+                    if (inferredTypeMapping != null)
+                    {
+                        break;
+                    }
                 }
             }
+
+            if (inferredTypeMapping == null)
+            {
+                throw new InvalidOperationException("TypeMapping should not be null.");
+            }
+
+            var whenClauses = new List<CaseWhenClause>();
+
+            foreach (var caseWhenClause in caseExpression.WhenClauses)
+            {
+                whenClauses.Add(
+                    new CaseWhenClause(
+                        ApplyTypeMapping(caseWhenClause.Test, _boolTypeMapping),
+                        ApplyTypeMapping(caseWhenClause.Result, inferredTypeMapping)));
+            }
+
+            var elseResult = ApplyTypeMapping(caseExpression.ElseResult, inferredTypeMapping);
+
+            return new CaseExpression(
+                whenClauses,
+                elseResult,
+                caseExpression.Type,
+                inferredTypeMapping);
+        }
+
+        protected virtual SqlExpression ApplyTypeMappingOnSqlBinary(
+            SqlBinaryExpression sqlBinaryExpression, RelationalTypeMapping typeMapping)
+        {
+            var left = sqlBinaryExpression.Left;
+            var right = sqlBinaryExpression.Right;
 
             switch (sqlBinaryExpression.OperatorType)
             {
@@ -128,31 +146,31 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                             throw new InvalidCastException("Comparison operation should be of type bool.");
                         }
 
-                        left = ApplyTypeMapping(left, inferredTypeMapping, false);
-                        right = ApplyTypeMapping(right, inferredTypeMapping, false);
+                        var inferredTypeMapping = InferTypeMappingForBinary(left, right);
+
+                        left = ApplyTypeMapping(left, inferredTypeMapping);
+                        right = ApplyTypeMapping(right, inferredTypeMapping);
 
                         return new SqlBinaryExpression(
                             sqlBinaryExpression.OperatorType,
                             left,
                             right,
                             typeof(bool),
-                            _boolTypeMapping,
-                            true);
+                            _boolTypeMapping);
                     }
 
                 case ExpressionType.AndAlso:
                 case ExpressionType.OrElse:
                     {
-                        left = ApplyTypeMapping(left, inferredTypeMapping, true);
-                        right = ApplyTypeMapping(right, inferredTypeMapping, true);
+                        left = ApplyTypeMapping(left, _boolTypeMapping);
+                        right = ApplyTypeMapping(right, _boolTypeMapping);
 
                         return new SqlBinaryExpression(
                             sqlBinaryExpression.OperatorType,
                             left,
                             right,
                             typeof(bool),
-                            _boolTypeMapping,
-                            true);
+                            _boolTypeMapping);
                     }
 
                 case ExpressionType.Add:
@@ -160,81 +178,103 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 case ExpressionType.Multiply:
                 case ExpressionType.Divide:
                 case ExpressionType.Modulo:
+                case ExpressionType.Coalesce:
                     {
-                        left = ApplyTypeMapping(left, inferredTypeMapping, false);
-                        right = ApplyTypeMapping(right, inferredTypeMapping, false);
+                        var inferredTypeMapping = InferTypeMappingForBinary(left, right);
+
+                        left = ApplyTypeMapping(left, inferredTypeMapping);
+                        right = ApplyTypeMapping(right, inferredTypeMapping);
 
                         return new SqlBinaryExpression(
                             sqlBinaryExpression.OperatorType,
                             left,
                             right,
                             sqlBinaryExpression.Type,
-                            inferredTypeMapping,
-                            false);
+                            inferredTypeMapping);
                     }
+
+                case ExpressionType.And:
+                case ExpressionType.Or:
+                    return null;
             }
 
             return null;
         }
 
+        private RelationalTypeMapping InferTypeMappingForBinary(SqlExpression left, SqlExpression right)
+        {
+            var typeMapping = ExpressionExtensions.InferTypeMapping(left, right);
+
+            if (typeMapping == null)
+            {
+                if (left is SqlCastExpression)
+                {
+                    typeMapping = _typeMappingSource.FindMapping(left.Type);
+                }
+                else if (right is SqlCastExpression)
+                {
+                    typeMapping = _typeMappingSource.FindMapping(right.Type);
+                }
+                else
+                {
+                    throw new InvalidOperationException("TypeMapping should not be null.");
+                }
+            }
+
+            return typeMapping;
+        }
+
         protected virtual SqlExpression ApplyTypeMappingOnSqlFunction(
-            SqlFunctionExpression sqlFunctionExpression, RelationalTypeMapping typeMapping, bool condition)
+            SqlFunctionExpression sqlFunctionExpression, RelationalTypeMapping typeMapping)
         {
             return sqlFunctionExpression;
         }
 
         protected virtual SqlExpression ApplyTypeMappingOnLike(
-            LikeExpression likeExpression, RelationalTypeMapping typeMapping, bool condition)
+            LikeExpression likeExpression, RelationalTypeMapping typeMapping)
         {
             var inferredTypeMapping = ExpressionExtensions.InferTypeMapping(likeExpression.Match, likeExpression.Pattern);
 
             if (inferredTypeMapping == null)
             {
-                return null;
+                throw new InvalidOperationException("TypeMapping should not be null.");
             }
 
-            var match = ApplyTypeMapping(likeExpression.Match, inferredTypeMapping, false);
-            var pattern = ApplyTypeMapping(likeExpression.Pattern, inferredTypeMapping, false);
-            var escapeChar = ApplyTypeMapping(
-                likeExpression.EscapeChar,
-                _typeMappingSource.FindMapping(likeExpression.EscapeChar.Type),
-                false);
+            var match = ApplyTypeMapping(likeExpression.Match, inferredTypeMapping);
+            var pattern = ApplyTypeMapping(likeExpression.Pattern, inferredTypeMapping);
+            var escapeChar = ApplyTypeMapping(likeExpression.EscapeChar, inferredTypeMapping);
 
             return new LikeExpression(
                 match,
                 pattern,
                 escapeChar,
-                typeof(bool),
-                _boolTypeMapping,
-                true);
+                _boolTypeMapping);
         }
 
         protected virtual SqlExpression ApplyTypeMappingOnSqlParameter(
-            SqlParameterExpression sqlParameterExpression, RelationalTypeMapping typeMapping, bool condition)
+            SqlParameterExpression sqlParameterExpression, RelationalTypeMapping typeMapping)
         {
-            if (typeMapping == null && condition)
+            if (typeMapping == null)
             {
-                typeMapping = _boolTypeMapping;
+                throw new InvalidOperationException("TypeMapping should not be null.");
             }
 
-            return sqlParameterExpression.ApplyTypeMapping(typeMapping).ApplyCondition(condition);
+            return sqlParameterExpression.ApplyTypeMapping(typeMapping);
         }
 
         protected virtual SqlExpression ApplyTypeMappingOnSqlConstant(
-            SqlConstantExpression sqlConstantExpression, RelationalTypeMapping typeMapping, bool condition)
+            SqlConstantExpression sqlConstantExpression, RelationalTypeMapping typeMapping)
         {
-            if (typeMapping == null && condition)
+            if (typeMapping == null)
             {
-                typeMapping = _boolTypeMapping;
+                throw new InvalidOperationException("TypeMapping should not be null.");
             }
 
-            return sqlConstantExpression.ApplyTypeMapping(typeMapping).ApplyCondition(condition);
+            return sqlConstantExpression.ApplyTypeMapping(typeMapping);
         }
 
-
-
         protected virtual SqlExpression ApplyTypeMappingOnExtension(
-            SqlExpression expression, RelationalTypeMapping typeMapping, bool condition)
+            SqlExpression expression, RelationalTypeMapping typeMapping)
         {
             return expression;
         }

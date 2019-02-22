@@ -19,7 +19,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             _methodCallTranslators.AddRange(
                 new IMethodCallTranslator[] {
-                    new EqualsTranslator(),
+                    new EqualsTranslator(typeMappingSource),
                     new StringConcatTranslator()
                 });
         }

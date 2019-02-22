@@ -24,9 +24,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                     return new SqlNullExpression(
                         nonNull,
                         sqlBinary.OperatorType == ExpressionType.NotEqual,
-                        sqlBinary.Type,
-                        sqlBinary.TypeMapping,
-                        sqlBinary.IsCondition);
+                        sqlBinary.TypeMapping);
                 }
 
             }

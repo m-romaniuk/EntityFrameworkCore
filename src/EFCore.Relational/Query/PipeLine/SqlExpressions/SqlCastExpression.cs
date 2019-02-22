@@ -13,12 +13,21 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public SqlCastExpression(
             SqlExpression operand,
             Type type,
-            RelationalTypeMapping typeMapping,
-            bool condition)
-            : base(type, typeMapping, condition)
+            RelationalTypeMapping typeMapping)
+            : base(type, typeMapping, false, true)
         {
             Check.NotNull(operand, nameof(operand));
 
+            Operand = operand.ConvertToValue(true);
+        }
+
+        private SqlCastExpression(
+            SqlExpression operand,
+            Type type,
+            RelationalTypeMapping typeMapping,
+            bool treatAsValue)
+            : base(type, typeMapping, false, treatAsValue)
+        {
             Operand = operand;
         }
 
@@ -27,8 +36,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var operand = (SqlExpression)visitor.Visit(Operand);
 
             return operand != Operand
-                ? new SqlCastExpression(operand, Type, TypeMapping, IsCondition)
+                ? new SqlCastExpression(operand, Type, TypeMapping)
                 : this;
+        }
+
+        public override SqlExpression ConvertToValue(bool treatAsValue)
+        {
+            return new SqlCastExpression(Operand, Type, TypeMapping, treatAsValue);
         }
 
         public SqlExpression Operand { get; }

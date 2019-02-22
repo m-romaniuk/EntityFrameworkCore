@@ -12,7 +12,14 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         private readonly IProperty _property;
 
         public ColumnExpression(IProperty property, TableExpressionBase table)
-            : base(property.ClrType, property.FindRelationalMapping(), false)
+            : base(property.ClrType, property.FindRelationalMapping(), false, true)
+        {
+            _property = property;
+            Table = table;
+        }
+
+        private ColumnExpression(IProperty property, TableExpressionBase table, bool treatAsValue)
+            : base(property.ClrType, property.FindRelationalMapping(), false, treatAsValue)
         {
             _property = property;
             Table = table;
@@ -25,6 +32,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             return newTable != Table
                 ? new ColumnExpression(_property, newTable)
                 : this;
+        }
+
+        public override SqlExpression ConvertToValue(bool treatAsValue)
+        {
+            return new ColumnExpression(_property, Table, treatAsValue);
         }
 
         public string Name => _property.Relational().ColumnName;

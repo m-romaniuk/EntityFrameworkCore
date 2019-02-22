@@ -12,24 +12,37 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
     {
         public SqlNotExpression(
             SqlExpression operand,
-            Type type,
+            RelationalTypeMapping typeMapping)
+            : base(typeof(bool), typeMapping, true, false)
+        {
+            Check.NotNull(operand, nameof(operand));
+
+            Operand = operand.ConvertToValue(false);
+        }
+
+        private SqlNotExpression(
+            SqlExpression operand,
             RelationalTypeMapping typeMapping,
-            bool condition)
-            : base(type, typeMapping, condition)
+            bool treatAsValue)
+            : base(typeof(bool), typeMapping, true, treatAsValue)
         {
             Check.NotNull(operand, nameof(operand));
 
             Operand = operand;
         }
 
-
         protected override Expression VisitChildren(ExpressionVisitor visitor)
         {
             var operand = (SqlExpression)visitor.Visit(Operand);
 
             return operand != Operand
-                ? new SqlNotExpression(operand, Type, TypeMapping, IsCondition)
+                ? new SqlNotExpression(operand, TypeMapping)
                 : this;
+        }
+
+        public override SqlExpression ConvertToValue(bool treatAsValue)
+        {
+            return new SqlNotExpression(Operand, TypeMapping, treatAsValue);
         }
 
         public SqlExpression Operand { get; }

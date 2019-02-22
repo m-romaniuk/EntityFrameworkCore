@@ -54,7 +54,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             {
                 var argument = arguments[0];
                 var stringTypeMapping = ExpressionExtensions.InferTypeMapping(instance, argument);
-                argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, stringTypeMapping, false);
+                argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, stringTypeMapping);
 
                 var charIndexExpression =
                     new SqlBinaryExpression(
@@ -65,7 +65,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                             null,
                             new[]
                             {
-                                _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(instance, stringTypeMapping, false),
+                                _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(instance, stringTypeMapping),
                                 argument
                             },
                             method.ReturnType,
@@ -73,8 +73,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                             false),
                         MakeSqlConstant(1),
                         method.ReturnType,
-                        _intTypeMapping,
-                        false);
+                        _intTypeMapping);
 
                 return new CaseExpression(
                     new[]
@@ -83,16 +82,14 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                             new SqlBinaryExpression(
                                 ExpressionType.Equal,
                                 argument,
-                                new SqlConstantExpression(Expression.Constant(string.Empty), stringTypeMapping, false),
+                                new SqlConstantExpression(Expression.Constant(string.Empty), stringTypeMapping),
                                 typeof(bool),
-                                _typeMappingSource.FindMapping(typeof(bool)),
-                                true),
+                                _typeMappingSource.FindMapping(typeof(bool))),
                             MakeSqlConstant(0))
                     },
                     charIndexExpression,
                     charIndexExpression.Type,
-                    charIndexExpression.TypeMapping,
-                    false);
+                    charIndexExpression.TypeMapping);
             }
 
             if (_replaceMethodInfo.Equals(method))
@@ -101,9 +98,9 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                 var secondArgument = arguments[1];
                 var stringTypeMapping = ExpressionExtensions.InferTypeMapping(instance, firstArgument, secondArgument);
 
-                instance = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(instance, stringTypeMapping, false);
-                firstArgument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(firstArgument, stringTypeMapping, false);
-                secondArgument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(secondArgument, stringTypeMapping, false);
+                instance = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(instance, stringTypeMapping);
+                firstArgument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(firstArgument, stringTypeMapping);
+                secondArgument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(secondArgument, stringTypeMapping);
 
                 return new SqlFunctionExpression(
                     null,
@@ -147,8 +144,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                             _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[0], _intTypeMapping),
                             MakeSqlConstant(1),
                             typeof(int),
-                            _intTypeMapping,
-                            false),
+                            _intTypeMapping),
                         _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[1], _intTypeMapping),
                     },
                     method.ReturnType,
@@ -166,7 +162,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 
         private SqlExpression MakeSqlConstant(int value)
         {
-            return new SqlConstantExpression(Expression.Constant(value), _intTypeMapping, false);
+            return new SqlConstantExpression(Expression.Constant(value), _intTypeMapping);
         }
     }
 }

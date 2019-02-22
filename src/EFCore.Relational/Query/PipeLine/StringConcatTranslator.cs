@@ -29,8 +29,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                     left,
                     right,
                     typeof(string),
-                    null,
-                    false);
+                    null);
             }
 
             return null;

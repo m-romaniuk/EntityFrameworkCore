@@ -12,8 +12,22 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
     {
         public CaseExpression(
             IEnumerable<CaseWhenClause> whenClauses, SqlExpression elseResult,
-            Type type, RelationalTypeMapping typeMapping, bool condition)
-            : base(type, typeMapping, condition)
+            Type type, RelationalTypeMapping typeMapping)
+            // TODO: actually infer conditional & type
+            : base(type, typeMapping, false, true)
+        {
+            WhenClauses = whenClauses;
+            ElseResult = elseResult.ConvertToValue(true);
+        }
+
+        private CaseExpression(
+            IEnumerable<CaseWhenClause> whenClauses,
+            SqlExpression elseResult,
+            Type type,
+            RelationalTypeMapping typeMapping,
+            bool treatAsValue)
+            // TODO: actually infer conditional & type
+            : base(type, typeMapping, false, treatAsValue)
         {
             WhenClauses = whenClauses;
             ElseResult = elseResult;
@@ -38,8 +52,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var elseResult = (SqlExpression)visitor.Visit(ElseResult);
 
             return changed || elseResult != ElseResult
-                ? new CaseExpression(whenClauses, elseResult, Type, TypeMapping, IsCondition)
+                ? new CaseExpression(whenClauses, elseResult, Type, TypeMapping)
                 : this;
+        }
+
+        public override SqlExpression ConvertToValue(bool treatAsValue)
+        {
+            return new CaseExpression(WhenClauses, ElseResult, Type, TypeMapping, treatAsValue);
         }
 
         public IEnumerable<CaseWhenClause> WhenClauses { get; }

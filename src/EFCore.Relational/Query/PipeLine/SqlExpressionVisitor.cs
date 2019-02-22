@@ -18,6 +18,9 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 case ColumnExpression columnExpression:
                     return VisitColumn(columnExpression);
 
+                case ExistsExpression existsExpression:
+                    return VisitExists(existsExpression);
+
                 case LikeExpression likeExpression:
                     return VisitLike(likeExpression);
 
@@ -58,6 +61,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             return base.VisitExtension(extensionExpression);
         }
 
+        protected abstract Expression VisitExists(ExistsExpression existsExpression);
         protected abstract Expression VisitCase(CaseExpression caseExpression);
         protected abstract Expression VisitSqlCast(SqlCastExpression sqlCastExpression);
         protected abstract Expression VisitSqlNot(SqlNotExpression sqlNotExpression);
