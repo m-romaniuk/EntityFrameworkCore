@@ -40,7 +40,29 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         }
 
         public string Name => _property.Relational().ColumnName;
-
         public TableExpressionBase Table { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is ColumnExpression columnExpression
+                    && Equals(columnExpression));
+
+        private bool Equals(ColumnExpression columnExpression)
+            => base.Equals(columnExpression)
+            && string.Equals(Name, columnExpression.Name)
+            && Table.Equals(columnExpression.Table);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Name.GetHashCode();
+                hashCode = (hashCode * 397) ^ Table.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

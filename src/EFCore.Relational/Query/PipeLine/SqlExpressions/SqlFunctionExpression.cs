@@ -80,5 +80,35 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public string Schema { get; }
         public IReadOnlyList<SqlExpression> Arguments { get; }
         public Expression Instance { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlFunctionExpression sqlFunctionExpression
+                    && Equals(sqlFunctionExpression));
+
+        private bool Equals(SqlFunctionExpression sqlFunctionExpression)
+            => base.Equals(sqlFunctionExpression)
+            && string.Equals(FunctionName, sqlFunctionExpression.FunctionName)
+            && string.Equals(Schema, sqlFunctionExpression.Schema)
+            && ((Instance == null && sqlFunctionExpression.Instance == null)
+                || (Instance != null && Instance.Equals(sqlFunctionExpression.Instance)))
+            && Arguments.SequenceEqual(sqlFunctionExpression.Arguments);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ FunctionName.GetHashCode();
+                hashCode = (hashCode * 397) ^ (Schema?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Instance?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ Arguments.Aggregate(
+                    0, (current, value) => current + ((current * 397) ^ value.GetHashCode()));
+
+
+                return hashCode;
+            }
+        }
     }
 }

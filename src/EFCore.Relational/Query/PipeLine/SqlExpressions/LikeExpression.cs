@@ -45,5 +45,30 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public SqlExpression Match { get; }
         public SqlExpression Pattern { get; }
         public SqlExpression EscapeChar { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is LikeExpression likeExpression
+                    && Equals(likeExpression));
+
+        private bool Equals(LikeExpression likeExpression)
+            => base.Equals(likeExpression)
+            && Match.Equals(likeExpression.Match)
+            && Pattern.Equals(likeExpression.Pattern)
+            && EscapeChar.Equals(likeExpression.EscapeChar);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Match.GetHashCode();
+                hashCode = (hashCode * 397) ^ Pattern.GetHashCode();
+                hashCode = (hashCode * 397) ^ EscapeChar.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

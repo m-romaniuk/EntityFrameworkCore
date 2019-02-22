@@ -24,5 +24,26 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         }
 
         public string Sql { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlFragmentExpression sqlFragmentExpression
+                    && Equals(sqlFragmentExpression));
+
+        private bool Equals(SqlFragmentExpression sqlFragmentExpression)
+            => base.Equals(sqlFragmentExpression)
+            && string.Equals(Sql, sqlFragmentExpression.Sql);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Sql.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

@@ -36,5 +36,30 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public bool IsCondition { get; }
         public bool ShouldBeValue { get; }
         public RelationalTypeMapping TypeMapping { get; private set; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlExpression sqlExpression
+                    && Equals(sqlExpression));
+
+        private bool Equals(SqlExpression sqlExpression)
+            => Type == sqlExpression.Type
+            && IsCondition == sqlExpression.IsCondition
+            && ShouldBeValue == sqlExpression.ShouldBeValue
+            && TypeMapping?.Equals(sqlExpression.TypeMapping) == true;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Type.GetHashCode();
+                hashCode = (hashCode * 397) ^ IsCondition.GetHashCode();
+                hashCode = (hashCode * 397) ^ ShouldBeValue.GetHashCode();
+                hashCode = (hashCode * 397) ^ (TypeMapping?.GetHashCode() ?? 0);
+
+                return hashCode;
+            }
+        }
     }
 }

@@ -35,5 +35,26 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         }
 
         public string Name => _parameterExpression.Name;
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlParameterExpression sqlParameterExpression
+                    && Equals(sqlParameterExpression));
+
+        private bool Equals(SqlParameterExpression sqlParameterExpression)
+            => base.Equals(sqlParameterExpression)
+            && string.Equals(Name, sqlParameterExpression.Name);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Name.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

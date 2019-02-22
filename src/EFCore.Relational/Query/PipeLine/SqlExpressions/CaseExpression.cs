@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -63,5 +64,29 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         public IEnumerable<CaseWhenClause> WhenClauses { get; }
         public SqlExpression ElseResult { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is CaseExpression caseExpression
+                    && Equals(caseExpression));
+
+        private bool Equals(CaseExpression caseExpression)
+            => base.Equals(caseExpression)
+            && WhenClauses.SequenceEqual(caseExpression.WhenClauses)
+            && ElseResult.Equals(caseExpression.ElseResult);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ WhenClauses.Aggregate(
+                    0, (current, value) => current + ((current * 397) ^ value.GetHashCode()));
+                hashCode = (hashCode * 397) ^ ElseResult.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

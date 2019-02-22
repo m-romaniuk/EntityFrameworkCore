@@ -33,5 +33,26 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         }
 
         public object Value => _constantExpression.Value;
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlConstantExpression sqlConstantExpression
+                    && Equals(sqlConstantExpression));
+
+        private bool Equals(SqlConstantExpression sqlConstantExpression)
+            => base.Equals(sqlConstantExpression)
+            && Value.Equals(sqlConstantExpression.Value);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Value.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

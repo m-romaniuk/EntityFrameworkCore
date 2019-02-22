@@ -13,5 +13,26 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         public SqlExpression Test { get; }
         public SqlExpression Result { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is CaseWhenClause caseWhenClause
+                    && Equals(caseWhenClause));
+
+        private bool Equals(CaseWhenClause caseWhenClause)
+            => Test.Equals(caseWhenClause.Test)
+            && Result.Equals(caseWhenClause.Result);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Test.GetHashCode();
+                hashCode = (hashCode * 397) ^ Result.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

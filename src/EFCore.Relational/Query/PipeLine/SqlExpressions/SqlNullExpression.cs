@@ -49,5 +49,28 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         public SqlExpression Operand { get; }
         public bool Negated { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlNullExpression sqlNullExpression
+                    && Equals(sqlNullExpression));
+
+        private bool Equals(SqlNullExpression sqlNullExpression)
+            => base.Equals(sqlNullExpression)
+            && Operand.Equals(sqlNullExpression.Operand)
+            && Negated == sqlNullExpression.Negated;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Operand.GetHashCode();
+                hashCode = (hashCode * 397) ^ Negated.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

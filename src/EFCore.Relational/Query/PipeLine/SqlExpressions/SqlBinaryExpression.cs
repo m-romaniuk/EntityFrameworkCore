@@ -110,5 +110,30 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         public ExpressionType OperatorType { get; }
         public SqlExpression Left { get; }
         public SqlExpression Right { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SqlBinaryExpression sqlBinaryExpression
+                    && Equals(sqlBinaryExpression));
+
+        private bool Equals(SqlBinaryExpression sqlBinaryExpression)
+            => base.Equals(sqlBinaryExpression)
+            && OperatorType == sqlBinaryExpression.OperatorType
+            && Left.Equals(sqlBinaryExpression.Left)
+            && Right.Equals(sqlBinaryExpression.Right);
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ OperatorType.GetHashCode();
+                hashCode = (hashCode * 397) ^ Left.GetHashCode();
+                hashCode = (hashCode * 397) ^ Right.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }

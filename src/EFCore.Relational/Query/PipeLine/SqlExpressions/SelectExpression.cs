@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query.PipeLine;
@@ -208,18 +209,103 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
             if (changed)
             {
-                var newSelectExpression = new SelectExpression(projectionMapping, tables);
-
-                newSelectExpression.Predicate = predicate;
-                newSelectExpression._orderings = orderings;
-                newSelectExpression.Offset = offset;
-                newSelectExpression.Limit = limit;
+                var newSelectExpression = new SelectExpression(projectionMapping, tables)
+                {
+                    Predicate = predicate,
+                    _orderings = orderings,
+                    Offset = offset,
+                    Limit = limit
+                };
 
                 return newSelectExpression;
 
             }
 
             return this;
+        }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is SelectExpression selectExpression
+                    && Equals(selectExpression));
+
+        private bool Equals(SelectExpression selectExpression)
+        {
+            if (!base.Equals(selectExpression))
+            {
+                return false;
+            }
+
+            foreach (var projectionMapping in _projectionMapping)
+            {
+                if (!selectExpression._projectionMapping.TryGetValue(projectionMapping.Key, out var projection))
+                {
+                    return false;
+                }
+
+                if (!projectionMapping.Value.Equals(projection))
+                {
+                    return false;
+                }
+            }
+
+            if (!_tables.SequenceEqual(selectExpression._tables))
+            {
+                return false;
+            }
+
+            if (!(Predicate == null && selectExpression.Predicate == null
+                || Predicate != null && Predicate.Equals(selectExpression.Predicate)))
+            {
+                return false;
+            }
+
+            if (!_orderings.SequenceEqual(selectExpression._orderings))
+            {
+                return false;
+            }
+
+            if (!(Offset == null && selectExpression.Offset == null
+                || Offset != null && Offset.Equals(selectExpression.Offset)))
+            {
+                return false;
+            }
+
+            if (!(Limit == null && selectExpression.Limit == null
+                || Limit != null && Limit.Equals(selectExpression.Limit)))
+            {
+                return false;
+            }
+
+            return IsDistinct == selectExpression.IsDistinct;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                foreach (var projectionMapping in _projectionMapping)
+                {
+                    hashCode = (hashCode * 397) ^ projectionMapping.Key.GetHashCode();
+                    hashCode = (hashCode * 397) ^ projectionMapping.Value.GetHashCode();
+                }
+
+                hashCode = (hashCode * 397) ^ _tables.Aggregate(
+                    0, (current, value) => current + ((current * 397) ^ value.GetHashCode()));
+
+                hashCode = (hashCode * 397) ^ (Predicate?.GetHashCode() ?? 0);
+
+                hashCode = (hashCode * 397) ^ _orderings.Aggregate(
+                    0, (current, value) => current + ((current * 397) ^ value.GetHashCode()));
+
+                hashCode = (hashCode * 397) ^ (Offset?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (Limit?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ IsDistinct.GetHashCode();
+
+                return hashCode;
+            }
         }
     }
 }

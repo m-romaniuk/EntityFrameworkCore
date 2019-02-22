@@ -38,5 +38,28 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         public SelectExpression Subquery { get; }
         public bool Negated { get; }
+
+        public override bool Equals(object obj)
+            => obj != null
+            && (ReferenceEquals(this, obj)
+                || obj is ExistsExpression existsExpression
+                    && Equals(existsExpression));
+
+        private bool Equals(ExistsExpression existsExpression)
+            => base.Equals(existsExpression)
+            && Subquery.Equals(existsExpression.Subquery)
+            && Negated == existsExpression.Negated;
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ Subquery.GetHashCode();
+                hashCode = (hashCode * 397) ^ Negated.GetHashCode();
+
+                return hashCode;
+            }
+        }
     }
 }
