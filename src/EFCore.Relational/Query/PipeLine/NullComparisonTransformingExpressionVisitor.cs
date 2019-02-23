@@ -26,7 +26,6 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                         sqlBinary.OperatorType == ExpressionType.NotEqual,
                         sqlBinary.TypeMapping);
                 }
-
             }
 
             return base.VisitExtension(extensionExpression);

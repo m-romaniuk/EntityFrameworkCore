@@ -14,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
         {
             Match = match.ConvertToValue(true);
             Pattern = pattern.ConvertToValue(true);
-            EscapeChar = escapeChar.ConvertToValue(true);
+            EscapeChar = escapeChar?.ConvertToValue(true);
         }
 
         private LikeExpression(
@@ -33,7 +33,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var escapeChar = (SqlExpression)visitor.Visit(EscapeChar);
 
             return match != Match || pattern != Pattern || escapeChar != EscapeChar
-                ? new LikeExpression(match, pattern, escapeChar, TypeMapping)
+                ? new LikeExpression(match, pattern, escapeChar, TypeMapping, ShouldBeValue)
                 : this;
         }
 

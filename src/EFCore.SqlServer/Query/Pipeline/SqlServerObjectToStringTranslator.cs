@@ -3,17 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 {
-    /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
     public class SqlServerObjectToStringTranslator : IMethodCallTranslator
     {
         private const int DefaultLength = 100;
@@ -25,7 +21,6 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.In
                 { typeof(long), "VARCHAR(20)" },
                 { typeof(DateTime), $"VARCHAR({DefaultLength})" },
                 { typeof(Guid), "VARCHAR(36)" },
-                { typeof(bool), "VARCHAR(5)" },
                 { typeof(byte), "VARCHAR(3)" },
                 { typeof(byte[]), $"VARCHAR({DefaultLength})" },
                 { typeof(double), $"VARCHAR({DefaultLength})" },
@@ -41,25 +36,37 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.In
                 { typeof(sbyte), "VARCHAR(4)" }
             };
 
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual Expression Translate(
-            MethodCallExpression methodCallExpression,
-            IDiagnosticsLogger<DbLoggerCategory.Query> logger)
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+        private readonly ITypeMappingApplyingExpressionVisitor _typeMappingApplyingExpressionVisitor;
+
+        public SqlServerObjectToStringTranslator(IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
         {
-            return methodCallExpression.Method.Name == nameof(ToString)
-                   && methodCallExpression.Arguments.Count == 0
-                   && methodCallExpression.Object != null
+            _typeMappingSource = typeMappingSource;
+            _typeMappingApplyingExpressionVisitor = typeMappingApplyingExpressionVisitor;
+        }
+
+        public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
+        {
+            return method.Name == nameof(ToString)
+                   && arguments.Count == 0
+                   && instance != null
                    && _typeMapping.TryGetValue(
-                       methodCallExpression.Object.Type
-                           .UnwrapNullableType(),
+                       instance.Type.UnwrapNullableType(),
                        out var storeType)
                 ? new SqlFunctionExpression(
-                    functionName: "CONVERT",
-                    returnType: methodCallExpression.Type,
-                    arguments: new[] { new SqlFragmentExpression(storeType), methodCallExpression.Object })
+                    null,
+                    "CONVERT",
+                    null,
+                    new[]
+                    {
+                        new SqlFragmentExpression(storeType),
+                        _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                            instance, _typeMappingSource.FindMapping(instance.Type))
+                    },
+                    typeof(string),
+                    _typeMappingSource.FindMapping(typeof(string)),
+                    false)
                 : null;
         }
     }

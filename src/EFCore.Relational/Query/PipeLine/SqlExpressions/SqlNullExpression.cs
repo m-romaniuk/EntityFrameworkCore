@@ -38,7 +38,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var operand = (SqlExpression)visitor.Visit(Operand);
 
             return operand != Operand
-                ? new SqlNullExpression(operand, Negated, TypeMapping)
+                ? new SqlNullExpression(operand, Negated, TypeMapping, ShouldBeValue)
                 : this;
         }
 

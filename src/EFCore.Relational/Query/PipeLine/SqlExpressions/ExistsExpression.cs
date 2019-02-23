@@ -27,7 +27,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var newSubquery = (SelectExpression)visitor.Visit(Subquery);
 
             return newSubquery != Subquery
-                ? new ExistsExpression(newSubquery, Negated, TypeMapping)
+                ? new ExistsExpression(newSubquery, Negated, TypeMapping, ShouldBeValue)
                 : this;
         }
 

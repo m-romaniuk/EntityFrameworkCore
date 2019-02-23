@@ -46,21 +46,27 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
         protected override Expression VisitChildren(ExpressionVisitor visitor)
         {
+            var changed = false;
             var instance = (SqlExpression)visitor.Visit(Instance);
+            changed |= instance != Instance;
             var arguments = new SqlExpression[Arguments.Count];
             for (var i = 0; i < arguments.Length; i++)
             {
                 arguments[i] = (SqlExpression)visitor.Visit(Arguments[i]);
+                changed |= arguments[i] != Arguments[i];
             }
 
-            return new SqlFunctionExpression(
-                instance,
-                FunctionName,
-                Schema,
-                arguments,
-                Type,
-                TypeMapping,
-                IsCondition);
+            return changed
+                ? new SqlFunctionExpression(
+                    instance,
+                    FunctionName,
+                    Schema,
+                    arguments,
+                    Type,
+                    TypeMapping,
+                    IsCondition,
+                    ShouldBeValue)
+                : this;
         }
 
         public override SqlExpression ConvertToValue(bool treatAsValue)

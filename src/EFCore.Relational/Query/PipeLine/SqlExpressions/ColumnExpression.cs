@@ -30,7 +30,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var newTable = (TableExpressionBase)visitor.Visit(Table);
 
             return newTable != Table
-                ? new ColumnExpression(_property, newTable)
+                ? new ColumnExpression(_property, newTable, ShouldBeValue)
                 : this;
         }
 

@@ -16,7 +16,12 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             {
                 new SqlServerMathTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
                 new SqlServerNewGuidTranslator(typeMappingSource),
-                new SqlServerStringMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor)
+                new SqlServerStringMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqlServerDateTimeMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqlServerDateDiffFunctionsTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqlServerConvertTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqlServerObjectToStringTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqlServerFullTextSearchFunctionsTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
             });
         }
     }

@@ -1,21 +1,16 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 {
-    /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
     public class SqlServerConvertTranslator : IMethodCallTranslator
     {
         private static readonly Dictionary<string, string> _typeMapping = new Dictionary<string, string>
@@ -31,7 +26,6 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.In
 
         private static readonly List<Type> _supportedTypes = new List<Type>
         {
-            typeof(bool),
             typeof(byte),
             typeof(DateTime),
             typeof(decimal),
@@ -51,23 +45,33 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.In
                             m => m.GetParameters().Length == 1
                                  && _supportedTypes.Contains(m.GetParameters().First().ParameterType)));
 
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual Expression Translate(
-            MethodCallExpression methodCallExpression,
-            IDiagnosticsLogger<DbLoggerCategory.Query> logger)
-            => _supportedMethods.Contains(methodCallExpression.Method)
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+        private readonly ITypeMappingApplyingExpressionVisitor _typeMappingApplyingExpressionVisitor;
+
+        public SqlServerConvertTranslator(IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
+        {
+            _typeMappingSource = typeMappingSource;
+            _typeMappingApplyingExpressionVisitor = typeMappingApplyingExpressionVisitor;
+        }
+
+        public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
+        {
+            return _supportedMethods.Contains(method)
                 ? new SqlFunctionExpression(
+                    null,
                     "CONVERT",
-                    methodCallExpression.Type,
+                    null,
                     new[]
                     {
-                        new SqlFragmentExpression(
-                            _typeMapping[methodCallExpression.Method.Name]),
-                        methodCallExpression.Arguments[0]
-                    })
+                        new SqlFragmentExpression(_typeMapping[method.Name]),
+                        _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                            arguments[0], _typeMappingSource.FindMapping(arguments[0].Type))
+                    },
+                    method.ReturnType,
+                    _typeMappingSource.FindMapping(method.ReturnType),
+                    false)
                 : null;
+        }
     }
 }

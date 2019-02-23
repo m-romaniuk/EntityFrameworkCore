@@ -21,7 +21,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
         public SqlExpression Translate(SqlExpression instance, MemberInfo member, Type returnType)
         {
             if (member.Name == nameof(string.Length)
-                && instance.Type == typeof(string))
+                && instance?.Type == typeof(string))
             {
                 return new SqlCastExpression(
                     new SqlFunctionExpression(

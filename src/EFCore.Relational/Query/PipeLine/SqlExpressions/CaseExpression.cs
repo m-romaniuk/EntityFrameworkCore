@@ -53,7 +53,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var elseResult = (SqlExpression)visitor.Visit(ElseResult);
 
             return changed || elseResult != ElseResult
-                ? new CaseExpression(whenClauses, elseResult, Type, TypeMapping)
+                ? new CaseExpression(whenClauses, elseResult, Type, TypeMapping, ShouldBeValue)
                 : this;
         }
 

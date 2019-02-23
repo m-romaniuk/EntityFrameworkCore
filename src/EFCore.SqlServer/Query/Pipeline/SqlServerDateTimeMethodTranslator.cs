@@ -1,22 +1,16 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 {
-    /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
-    public class SqlServerDateAddTranslator : IMethodCallTranslator
+    public class SqlServerDateTimeMethodTranslator : IMethodCallTranslator
     {
         private readonly Dictionary<MethodInfo, string> _methodInfoDatePartMapping = new Dictionary<MethodInfo, string>
         {
@@ -35,33 +29,45 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.In
             { typeof(DateTimeOffset).GetRuntimeMethod(nameof(DateTimeOffset.AddSeconds), new[] { typeof(double) }), "second" },
             { typeof(DateTimeOffset).GetRuntimeMethod(nameof(DateTimeOffset.AddMilliseconds), new[] { typeof(double) }), "millisecond" }
         };
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+        private readonly ITypeMappingApplyingExpressionVisitor _typeMappingApplyingExpressionVisitor;
 
-        /// <summary>
-        ///     Translates the given method call expression.
-        /// </summary>
-        /// <param name="methodCallExpression">The method call expression.</param>
-        /// <param name="logger"> The logger. </param>
-        /// <returns>
-        ///     A SQL expression representing the translated MethodCallExpression.
-        /// </returns>
-        public virtual Expression Translate(
-            MethodCallExpression methodCallExpression,
-            IDiagnosticsLogger<DbLoggerCategory.Query> logger)
+        public SqlServerDateTimeMethodTranslator(IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
         {
-            if (_methodInfoDatePartMapping.TryGetValue(methodCallExpression.Method, out var datePart))
+            _typeMappingSource = typeMappingSource;
+            _typeMappingApplyingExpressionVisitor = typeMappingApplyingExpressionVisitor;
+        }
+
+        public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
+        {
+            if (_methodInfoDatePartMapping.TryGetValue(method, out var datePart))
             {
-                var amountToAdd = methodCallExpression.Arguments.First();
+                instance = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    instance, _typeMappingSource.FindMapping(instance.Type));
+                var amountToAdd = arguments[0];
+                amountToAdd = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    amountToAdd, _typeMappingSource.FindMapping(typeof(int)));
 
                 return !datePart.Equals("year")
                        && !datePart.Equals("month")
-                       && amountToAdd is ConstantExpression constantExpression
-                       && ((double)constantExpression.Value >= int.MaxValue
-                           || (double)constantExpression.Value <= int.MinValue)
+                       && amountToAdd is SqlConstantExpression sqlConstant
+                       && ((double)sqlConstant.Value >= int.MaxValue
+                           || (double)sqlConstant.Value <= int.MinValue)
                     ? null
                     : new SqlFunctionExpression(
-                        functionName: "DATEADD",
-                        returnType: methodCallExpression.Type,
-                        arguments: new[] { new SqlFragmentExpression(datePart), amountToAdd, methodCallExpression.Object });
+                        null,
+                        "DATEADD",
+                        null,
+                        new[]
+                        {
+                            new SqlFragmentExpression(datePart),
+                            amountToAdd,
+                            instance
+                        },
+                        instance.Type,
+                        instance.TypeMapping,
+                        false);
             }
 
             return null;

@@ -198,12 +198,46 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
             else
             {
+                var needsParenthesis = RequiresBrackets(sqlBinaryExpression.Left);
+
+                if (needsParenthesis)
+                {
+                    _relationalCommandBuilder.Append("(");
+                }
+
                 Visit(sqlBinaryExpression.Left);
+
+                if (needsParenthesis)
+                {
+                    _relationalCommandBuilder.Append(")");
+                }
+
                 _relationalCommandBuilder.Append(_operatorMap[sqlBinaryExpression.OperatorType]);
+
+                needsParenthesis = RequiresBrackets(sqlBinaryExpression.Right);
+
+                if (needsParenthesis)
+                {
+                    _relationalCommandBuilder.Append("(");
+                }
+
                 Visit(sqlBinaryExpression.Right);
+
+                if (needsParenthesis)
+                {
+                    _relationalCommandBuilder.Append(")");
+                }
+
+
             }
 
             return sqlBinaryExpression;
+        }
+
+        private bool RequiresBrackets(SqlExpression expression)
+        {
+            return expression is SqlBinaryExpression sqlBinary
+                && sqlBinary.OperatorType != ExpressionType.Coalesce;
         }
 
         protected override Expression VisitSqlConstant(SqlConstantExpression sqlConstantExpression)
@@ -349,7 +383,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             if (existsExpression.Negated)
             {
-                _relationalCommandBuilder.AppendLine("NOT EXISTS (");
+                _relationalCommandBuilder.Append("NOT ");
             }
 
             _relationalCommandBuilder.AppendLine("EXISTS (");

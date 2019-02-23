@@ -15,6 +15,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
     public class RelationalQueryableMethodTranslatingExpressionVisitor : QueryableMethodTranslatingExpressionVisitor
     {
         private readonly RelationalSqlTranslatingExpressionVisitor _sqlTranslator;
+        private readonly RelationalProjectionBindingExpressionVisitor _projectionBindingExpressionVisitor;
         private readonly IRelationalTypeMappingSource _typeMappingSource;
 
         public RelationalQueryableMethodTranslatingExpressionVisitor(
@@ -28,20 +29,47 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 typeMappingApplyingExpressionVisitor,
                 memberTranslatorProvider,
                 methodCallTranslatorProvider);
+
+            _projectionBindingExpressionVisitor = new RelationalProjectionBindingExpressionVisitor(_sqlTranslator);
             _typeMappingSource = typeMappingSource;
         }
 
         protected override ShapedQueryExpression TranslateAll(ShapedQueryExpression source, LambdaExpression predicate)
         {
-            //var translation = TranslateLambdaExpression(source, predicate, true);
+            var translation = TranslateLambdaExpression(source, predicate, true);
 
-            //if (translation?.IsCondition == true)
-            //{
-            //    ((SelectExpression)source.QueryExpression).ApplyPredicate(
-            //        new SqlNotExpression(translation, typeof(bool), _typeMappingSource.FindMapping(typeof(bool)), true));
+            if (translation != null)
+            {
+                var selectExpression = (SelectExpression)source.QueryExpression;
 
-            //    return source;
-            //}
+                selectExpression.ApplyPredicate(
+                    new SqlNotExpression(translation, _typeMappingSource.FindMapping(typeof(bool))));
+
+
+                selectExpression.ApplyProjection(new Dictionary<ProjectionMember, Expression>());
+
+                translation = new ExistsExpression(
+                    selectExpression,
+                    true,
+                    _typeMappingSource.FindMapping(typeof(bool)))
+                        .ConvertToValue(true);
+
+                var projectionMapping = new Dictionary<ProjectionMember, Expression>
+                {
+                    { new ProjectionMember(), translation }
+                };
+
+                source.QueryExpression = new SelectExpression(
+                    projectionMapping,
+                    new List<TableExpressionBase>());
+
+                source.ShaperExpression
+                    = Expression.Lambda(
+                        new ProjectionBindingExpression(source.QueryExpression, new ProjectionMember(), typeof(bool)),
+                        source.ShaperExpression.Parameters);
+
+                return source;
+            }
 
             throw new InvalidOperationException();
         }
@@ -132,7 +160,15 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             return AggregateResultShaper(source, projection, throwOnNullResult: true, resultType);
         }
 
-        protected override ShapedQueryExpression TranslateCast(ShapedQueryExpression source, Type resultType) => throw new NotImplementedException();
+        protected override ShapedQueryExpression TranslateCast(ShapedQueryExpression source, Type resultType)
+        {
+            if (source.ShaperExpression.ReturnType == resultType)
+            {
+                return source;
+            }
+
+            throw new NotImplementedException();
+        }
 
         protected override ShapedQueryExpression TranslateConcat(ShapedQueryExpression source1, ShapedQueryExpression source2) => throw new NotImplementedException();
 
@@ -316,7 +352,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
             var newSelectorBody = new ReplacingExpressionVisitor(parameterBindings).Visit(selector.Body);
 
-            newSelectorBody = new RelationalProjectionBindingExpressionVisitor(_sqlTranslator)
+            newSelectorBody = _projectionBindingExpressionVisitor
                 .Translate((SelectExpression)source.QueryExpression, newSelectorBody);
 
             source.ShaperExpression = Expression.Lambda(newSelectorBody, source.ShaperExpression.Parameters);
@@ -483,6 +519,8 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                     { new ProjectionMember(), projection }
                 });
 
+            selectExpression.ClearOrdering();
+
             Expression shaper = new ProjectionBindingExpression(selectExpression, new ProjectionMember(), projection.Type);
 
             if (throwOnNullResult)
@@ -500,10 +538,9 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                                     .Single(ci => ci.GetParameters().Length == 1),
                                 Expression.Constant(RelationalStrings.NoElements)),
                             projection.Type),
-                        resultVariable),
-                    resultType != resultVariable.Type
-                    ? Expression.Convert(resultVariable, resultType)
-                    : (Expression)resultVariable);
+                        resultType != resultVariable.Type
+                            ? Expression.Convert(resultVariable, resultType)
+                            : (Expression)resultVariable));
             }
             else if (resultType.IsNullableType())
             {

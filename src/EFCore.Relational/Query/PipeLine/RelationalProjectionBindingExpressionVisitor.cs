@@ -51,6 +51,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             if (!(expression is NewExpression
+                  || expression is MemberInitExpression
                   || expression is EntityShaperExpression))
             {
 
@@ -86,7 +87,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         protected override Expression VisitNew(NewExpression newExpression)
         {
             var newArguments = new Expression[newExpression.Arguments.Count];
-            for (var i = 0; i < newExpression.Arguments.Count; i++)
+            for (var i = 0; i < newArguments.Length; i++)
             {
                 // TODO: Members can be null????
                 var projectionMember = _projectionMembers.Peek().AddMember(newExpression.Members[i]);
@@ -96,6 +97,24 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             return newExpression.Update(newArguments);
+        }
+
+        protected override Expression VisitMemberInit(MemberInitExpression memberInitExpression)
+        {
+            var newExpression = (NewExpression)Visit(memberInitExpression.NewExpression);
+            var newBindings = new MemberAssignment[memberInitExpression.Bindings.Count];
+            for (var i = 0; i < newBindings.Length; i++)
+            {
+                // TODO: Members can be null????
+                var memberAssignment = (MemberAssignment)memberInitExpression.Bindings[i];
+
+                var projectionMember = _projectionMembers.Peek().AddMember(memberAssignment.Member);
+                _projectionMembers.Push(projectionMember);
+
+                newBindings[i] = memberAssignment.Update(Visit(memberAssignment.Expression));
+            }
+
+            return memberInitExpression.Update(newExpression, newBindings);
         }
     }
 }

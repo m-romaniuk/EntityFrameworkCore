@@ -78,7 +78,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var right = (SqlExpression)visitor.Visit(Right);
 
             return left != Left || right != Right
-                ? new SqlBinaryExpression(OperatorType, left, right, Type, TypeMapping)
+                ? new SqlBinaryExpression(OperatorType, left, right, Type, TypeMapping, ShouldBeValue)
                 : this;
         }
 

@@ -3,20 +3,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
-using Microsoft.EntityFrameworkCore.Utilities;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 {
-    /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
-    public class SqlServerDateDiffTranslator : IMethodCallTranslator
+    public class SqlServerDateDiffFunctionsTranslator : IMethodCallTranslator
     {
         private readonly Dictionary<MethodInfo, string> _methodInfoDateDiffMapping
             = new Dictionary<MethodInfo, string>
@@ -239,22 +233,45 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.ExpressionTranslators.In
                 }
             };
 
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual Expression Translate(
-            MethodCallExpression methodCallExpression,
-            IDiagnosticsLogger<DbLoggerCategory.Query> logger)
-        {
-            Check.NotNull(methodCallExpression, nameof(methodCallExpression));
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+        private readonly ITypeMappingApplyingExpressionVisitor _typeMappingApplyingExpressionVisitor;
 
-            return _methodInfoDateDiffMapping.TryGetValue(methodCallExpression.Method, out var datePart)
-                ? new SqlFunctionExpression(
-                    functionName: "DATEDIFF",
-                    returnType: methodCallExpression.Type,
-                    arguments: new[] { new SqlFragmentExpression(datePart), methodCallExpression.Arguments[1], methodCallExpression.Arguments[2] })
-                : null;
+        public SqlServerDateDiffFunctionsTranslator(
+            IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
+        {
+            _typeMappingSource = typeMappingSource;
+            _typeMappingApplyingExpressionVisitor = typeMappingApplyingExpressionVisitor;
+        }
+
+        public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
+        {
+            if (_methodInfoDateDiffMapping.TryGetValue(method, out var datePart))
+            {
+                var startDate = arguments[1];
+                var endDate = arguments[2];
+                var typeMapping = ExpressionExtensions.InferTypeMapping(startDate, endDate)
+                    ?? _typeMappingSource.FindMapping(startDate.Type);
+
+                startDate = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(startDate, typeMapping);
+                endDate = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(endDate, typeMapping);
+
+                return new SqlFunctionExpression(
+                    null,
+                    "DATEDIFF",
+                    null,
+                    new[]
+                    {
+                        new SqlFragmentExpression(datePart),
+                        startDate,
+                        endDate
+                    },
+                    typeof(int),
+                    _typeMappingSource.FindMapping(typeof(int)),
+                    false);
+            }
+
+            return null;
         }
     }
 }

@@ -22,7 +22,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 {
     public abstract partial class SimpleQueryTestBase<TFixture>
     {
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Union_with_custom_projection(bool isAsync)
         {
@@ -1436,7 +1436,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact]
+        [ConditionalFact(Skip = "#6812")]
         public virtual void Concat_dbset()
         {
             using (var context = CreateContext())
@@ -1450,7 +1450,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalFact]
+        [ConditionalFact(Skip = "#6812")]
         public virtual void Concat_simple()
         {
             using (var context = CreateContext())
@@ -1466,7 +1466,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Concat_nested(bool isAsync)
         {
@@ -1478,7 +1478,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 12);
         }
 
-        [ConditionalFact]
+        [ConditionalFact(Skip = "#6812")]
         public virtual void Concat_non_entity()
         {
             using (var context = CreateContext())
@@ -1496,7 +1496,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Except_dbset(bool isAsync)
         {
@@ -1505,7 +1505,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 cs => cs.Where(s => s.ContactTitle == "Owner").Except(cs));
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Except_simple(bool isAsync)
         {
@@ -1526,7 +1526,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 cs => cs.Except(cs).Select(e => 1));
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Except_nested(bool isAsync)
         {
@@ -1538,7 +1538,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 13);
         }
 
-        [ConditionalFact]
+        [ConditionalFact(Skip = "#6812")]
         public virtual void Except_non_entity()
         {
             using (var context = CreateContext())
@@ -1556,7 +1556,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Intersect_dbset(bool isAsync)
         {
@@ -1566,7 +1566,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 5);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Intersect_simple(bool isAsync)
         {
@@ -1577,7 +1577,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 3);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Intersect_nested(bool isAsync)
         {
@@ -1589,7 +1589,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalFact]
+        [ConditionalFact(Skip = "#6812")]
         public virtual void Intersect_non_entity()
         {
             using (var context = CreateContext())
@@ -1607,7 +1607,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Union_dbset(bool isAsync)
         {
@@ -1617,7 +1617,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 91);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Union_simple(bool isAsync)
         {
@@ -1628,7 +1628,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 19);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "#6812")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Union_nested(bool isAsync)
         {
@@ -1640,7 +1640,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 25);
         }
 
-        [ConditionalFact]
+        [ConditionalTheory(Skip = "#6812")]
         public virtual void Union_non_entity()
         {
             using (var context = CreateContext())
