@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -429,20 +430,89 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override Expression VisitIn(InExpression inExpression)
         {
-            Visit(inExpression.Item);
-
-            _relationalCommandBuilder.Append(inExpression.Negated ? " NOT IN " : " IN ");
-
             if (inExpression.Values != null)
             {
-                _relationalCommandBuilder.Append("(");
+                var inValues = new List<SqlConstantExpression>();
+                var hasNullValue = false;
 
-                //GenerateList(inExpression.Values, e => Visit(e));
+                switch (inExpression.Values)
+                {
+                    case SqlConstantExpression sqlConstant:
+                        {
+                            var values = (IEnumerable)sqlConstant.Value;
+                            foreach (var value in values)
+                            {
+                                if (value == null)
+                                {
+                                    hasNullValue = true;
+                                    continue;
+                                }
 
-                _relationalCommandBuilder.Append(")");
+                                inValues.Add(
+                                    new SqlConstantExpression(
+                                        Expression.Constant(value),
+                                        sqlConstant.TypeMapping));
+                            }
+                        }
+                        break;
+
+                    case SqlParameterExpression sqlParameter:
+                        {
+                            var values = (IEnumerable)_parametersValues[sqlParameter.Name];
+                            foreach (var value in values)
+                            {
+                                if (value == null)
+                                {
+                                    hasNullValue = true;
+                                    continue;
+                                }
+
+                                inValues.Add(
+                                    new SqlConstantExpression(
+                                        Expression.Constant(value),
+                                        sqlParameter.TypeMapping));
+                            }
+                        }
+                        break;
+                }
+
+                if (inValues.Count > 0)
+                {
+                    if (hasNullValue)
+                    {
+                        _relationalCommandBuilder.Append("(");
+                    }
+
+                    Visit(inExpression.Item);
+                    _relationalCommandBuilder.Append(inExpression.Negated ? " NOT IN " : " IN ");
+                    _relationalCommandBuilder.Append("(");
+                    GenerateList(inValues, e => Visit(e));
+                    _relationalCommandBuilder.Append(")");
+
+                    if (hasNullValue)
+                    {
+                        _relationalCommandBuilder.Append(_operatorMap[ExpressionType.OrElse]);
+                        Visit(new SqlNullExpression(inExpression.Item, false, inExpression.TypeMapping));
+                        _relationalCommandBuilder.Append(")");
+                    }
+                }
+                else
+                {
+                    Visit(
+                        hasNullValue
+                        ? (Expression)new SqlNullExpression(inExpression.Item, false, inExpression.TypeMapping)
+                        : new SqlBinaryExpression(
+                            ExpressionType.Equal,
+                            new SqlConstantExpression(Expression.Constant(true), inExpression.TypeMapping),
+                            new SqlConstantExpression(Expression.Constant(false), inExpression.TypeMapping),
+                            typeof(bool),
+                            inExpression.TypeMapping));
+                }
             }
             else
             {
+                Visit(inExpression.Item);
+                _relationalCommandBuilder.Append(inExpression.Negated ? " NOT IN " : " IN ");
                 _relationalCommandBuilder.AppendLine("(");
 
                 using (_relationalCommandBuilder.Indent())
