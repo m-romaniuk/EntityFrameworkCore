@@ -21,11 +21,17 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 case ExistsExpression existsExpression:
                     return VisitExists(existsExpression);
 
+                case InExpression inExpression:
+                    return VisitIn(inExpression);
+
                 case LikeExpression likeExpression:
                     return VisitLike(likeExpression);
 
                 case OrderingExpression orderingExpression:
                     return VisitOrdering(orderingExpression);
+
+                case ProjectionExpression projectionExpression:
+                    return VisitProjection(projectionExpression);
 
                 case SelectExpression selectExpression:
                     return VisitSelect(selectExpression);
@@ -62,6 +68,8 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         }
 
         protected abstract Expression VisitExists(ExistsExpression existsExpression);
+        protected abstract Expression VisitIn(InExpression inExpression);
+        protected abstract Expression VisitProjection(ProjectionExpression projectionExpression);
         protected abstract Expression VisitCase(CaseExpression caseExpression);
         protected abstract Expression VisitSqlCast(SqlCastExpression sqlCastExpression);
         protected abstract Expression VisitSqlNot(SqlNotExpression sqlNotExpression);

@@ -70,7 +70,20 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override Expression VisitSelect(SelectExpression selectExpression)
         {
+            IDisposable subQueryIndent = null;
+
+            if (!string.IsNullOrEmpty(selectExpression.Alias))
+            {
+                _relationalCommandBuilder.AppendLine("(");
+                subQueryIndent = _relationalCommandBuilder.Indent();
+            }
+
             _relationalCommandBuilder.Append("SELECT ");
+
+            if (selectExpression.IsDistinct)
+            {
+                _relationalCommandBuilder.Append("DISTINCT ");
+            }
 
             if (selectExpression.Limit != null
                 && selectExpression.Offset == null)
@@ -80,11 +93,6 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 Visit(selectExpression.Limit);
 
                 _relationalCommandBuilder.Append(") ");
-            }
-
-            if (selectExpression.IsDistinct)
-            {
-                _relationalCommandBuilder.Append("DISTINCT ");
             }
 
             if (selectExpression.Projection.Any())
@@ -139,9 +147,30 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 }
             }
 
+            if (!string.IsNullOrEmpty(selectExpression.Alias))
+            {
+                subQueryIndent.Dispose();
+
+                _relationalCommandBuilder.AppendLine()
+                    .Append(") AS " + _sqlGenerationHelper.DelimitIdentifier(selectExpression.Alias));
+            }
+
             return selectExpression;
         }
 
+        protected override Expression VisitProjection(ProjectionExpression projectionExpression)
+        {
+            Visit(projectionExpression.SqlExpression);
+
+            if (!string.Equals(string.Empty, projectionExpression.Alias)
+                && !(projectionExpression.SqlExpression is ColumnExpression column
+                     && string.Equals(column.Name, projectionExpression.Alias)))
+            {
+                _relationalCommandBuilder.Append(" AS " + projectionExpression.Alias);
+            }
+
+            return projectionExpression;
+        }
 
         protected override Expression VisitSqlFunction(SqlFunctionExpression sqlFunctionExpression)
         {
@@ -190,11 +219,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             if (sqlBinaryExpression.OperatorType == ExpressionType.Coalesce)
             {
-                    _relationalCommandBuilder.Append("COALESCE(");
-                    Visit(sqlBinaryExpression.Left);
-                    _relationalCommandBuilder.Append(", ");
-                    Visit(sqlBinaryExpression.Right);
-                    _relationalCommandBuilder.Append(")");
+                _relationalCommandBuilder.Append("COALESCE(");
+                Visit(sqlBinaryExpression.Left);
+                _relationalCommandBuilder.Append(", ");
+                Visit(sqlBinaryExpression.Right);
+                _relationalCommandBuilder.Append(")");
             }
             else
             {
@@ -331,7 +360,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                         .AppendLine()
                         .Append("WHEN ");
                     Visit(whenClause.Test);
-                    _relationalCommandBuilder.Append(" THEN ");
+                    _relationalCommandBuilder.Append("THEN ");
                     Visit(whenClause.Result);
                 }
 
@@ -396,6 +425,35 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             _relationalCommandBuilder.Append(")");
 
             return existsExpression;
+        }
+
+        protected override Expression VisitIn(InExpression inExpression)
+        {
+            Visit(inExpression.Item);
+
+            _relationalCommandBuilder.Append(inExpression.Negated ? " NOT IN " : " IN ");
+
+            if (inExpression.Values != null)
+            {
+                _relationalCommandBuilder.Append("(");
+
+                //GenerateList(inExpression.Values, e => Visit(e));
+
+                _relationalCommandBuilder.Append(")");
+            }
+            else
+            {
+                _relationalCommandBuilder.AppendLine("(");
+
+                using (_relationalCommandBuilder.Indent())
+                {
+                    Visit(inExpression.Subquery);
+                }
+
+                _relationalCommandBuilder.AppendLine().AppendLine(")");
+            }
+
+            return inExpression;
         }
     }
 }

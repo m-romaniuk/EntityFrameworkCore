@@ -96,7 +96,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
                 public void Dispose()
                 {
-                    _dataReader.Dispose();
+                    _dataReader?.Dispose();
                     _dataReader = null;
                     _relationalQueryContext.Connection.Close();
                 }
@@ -209,7 +209,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                     return CreateGetValueExpression(
                         projectionIndex,
                         null,
-                        projection.TypeMapping,
+                        projection.SqlExpression.TypeMapping,
                         projectionBindingExpression.Type);
                 }
 

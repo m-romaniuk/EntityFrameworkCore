@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Microsoft.EntityFrameworkCore.Query.PipeLine
@@ -39,6 +40,12 @@ namespace Microsoft.EntityFrameworkCore.Query.PipeLine
                 var index = newExpression.Members.IndexOf(memberExpression.Member);
 
                 return newExpression.Arguments[index];
+            }
+
+            if (innerExpression is MemberInitExpression memberInitExpression)
+            {
+                return ((MemberAssignment)memberInitExpression.Bindings
+                    .Single(mb => mb.Member == memberExpression.Member)).Expression;
             }
 
             return memberExpression.Update(innerExpression);

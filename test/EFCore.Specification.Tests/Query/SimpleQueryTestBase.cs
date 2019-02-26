@@ -2867,7 +2867,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 assertOrder: true);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "OrderByOrderBy should ignore inner ordering")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task OrderBy_multiple(bool isAsync)
         {

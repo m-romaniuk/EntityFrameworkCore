@@ -45,8 +45,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 selectExpression.ApplyPredicate(
                     new SqlNotExpression(translation, _typeMappingSource.FindMapping(typeof(bool))));
 
-
                 selectExpression.ApplyProjection(new Dictionary<ProjectionMember, Expression>());
+
+                if (selectExpression.Limit == null
+                    && selectExpression.Offset == null)
+                {
+                    selectExpression.ClearOrdering();
+                }
 
                 translation = new ExistsExpression(
                     selectExpression,
@@ -60,7 +65,9 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 };
 
                 source.QueryExpression = new SelectExpression(
+                    null,
                     projectionMapping,
+                    new List<ProjectionExpression>(),
                     new List<TableExpressionBase>());
 
                 source.ShaperExpression
@@ -85,6 +92,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
             selectExpression.ApplyProjection(new Dictionary<ProjectionMember, Expression>());
 
+            if (selectExpression.Limit == null
+                && selectExpression.Offset == null)
+            {
+                selectExpression.ClearOrdering();
+            }
+
             var translation = new ExistsExpression(
                 selectExpression,
                 false,
@@ -97,7 +110,9 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             };
 
             source.QueryExpression = new SelectExpression(
+                "",
                 projectionMapping,
+                new List<ProjectionExpression>(),
                 new List<TableExpressionBase>());
 
             source.ShaperExpression
@@ -172,16 +187,67 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override ShapedQueryExpression TranslateConcat(ShapedQueryExpression source1, ShapedQueryExpression source2) => throw new NotImplementedException();
 
-        protected override ShapedQueryExpression TranslateContains(ShapedQueryExpression source, Expression item) => throw new NotImplementedException();
+        protected override ShapedQueryExpression TranslateContains(ShapedQueryExpression source, Expression item)
+        {
+            var selectExpression = (SelectExpression)source.QueryExpression;
+            var translation = TranslateExpression(selectExpression, item, false);
+
+            if (translation != null)
+            {
+                if (selectExpression.Limit == null
+                    && selectExpression.Offset == null)
+                {
+                    selectExpression.ClearOrdering();
+                }
+
+                selectExpression.ApplyProjection();
+
+                translation = new InExpression(
+                    translation,
+                    false,
+                    selectExpression,
+                    _typeMappingSource.FindMapping(typeof(bool)))
+                        .ConvertToValue(true);
+
+                var projectionMapping = new Dictionary<ProjectionMember, Expression>
+                {
+                    { new ProjectionMember(), translation }
+                };
+
+
+                source.QueryExpression = new SelectExpression(
+                    "",
+                    projectionMapping,
+                    new List<ProjectionExpression>(),
+                    new List<TableExpressionBase>());
+
+                source.ShaperExpression
+                    = Expression.Lambda(
+                        new ProjectionBindingExpression(source.QueryExpression, new ProjectionMember(), typeof(bool)),
+                        source.ShaperExpression.Parameters);
+
+                return source;
+            }
+
+
+            throw new NotImplementedException();
+        }
 
         protected override ShapedQueryExpression TranslateCount(ShapedQueryExpression source, LambdaExpression predicate)
         {
+            var selectExpression = (SelectExpression)source.QueryExpression;
+
+            if (selectExpression.IsDistinct
+                || selectExpression.Limit != null
+                || selectExpression.Offset != null)
+            {
+                selectExpression.PushdownIntoSubQuery();
+            }
+
             if (predicate != null)
             {
                 source = TranslateWhere(source, predicate);
             }
-
-            var selectExpression = (SelectExpression)source.QueryExpression;
 
             var translation = new SqlFunctionExpression(
                     null,
@@ -258,6 +324,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
             var selectExpression = (SelectExpression)source.QueryExpression;
 
+            if (selectExpression.Limit != null
+                || selectExpression.Offset != null)
+            {
+                selectExpression.PushdownIntoSubQuery();
+            }
+
             selectExpression.Reverse();
 
             selectExpression.ApplyLimit(
@@ -324,11 +396,17 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         protected override ShapedQueryExpression TranslateOrderBy(ShapedQueryExpression source, LambdaExpression keySelector, bool ascending)
         {
+            var selectExpression = (SelectExpression)source.QueryExpression;
+            if (selectExpression.IsDistinct)
+            {
+                selectExpression.PushdownIntoSubQuery();
+            }
+
             var translation = TranslateLambdaExpression(source, keySelector, false);
 
             if (translation != null)
             {
-                ((SelectExpression)source.QueryExpression).ApplyOrderBy(new OrderingExpression(translation, ascending));
+                selectExpression.ApplyOrderBy(new OrderingExpression(translation, ascending));
 
                 return source;
             }

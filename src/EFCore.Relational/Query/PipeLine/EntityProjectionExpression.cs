@@ -10,7 +10,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 {
     public class EntityProjectionExpression : Expression
     {
-        private readonly IDictionary<IProperty, ColumnExpression> _propertyExpressionCache
+        private readonly IDictionary<IProperty, ColumnExpression> _propertyExpressionsCache
             = new Dictionary<IProperty, ColumnExpression>();
         private readonly TableExpressionBase _innerTable;
 
@@ -20,23 +20,48 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             _innerTable = innerTable;
         }
 
+        public EntityProjectionExpression(IEntityType entityType, IDictionary<IProperty, ColumnExpression> propertyExpressions)
+        {
+            EntityType = entityType;
+            _propertyExpressionsCache = propertyExpressions;
+        }
+
         protected override Expression VisitChildren(ExpressionVisitor visitor)
         {
-            var table = (TableExpressionBase)visitor.Visit(_innerTable);
+            if (_innerTable != null)
+            {
+                var table = (TableExpressionBase)visitor.Visit(_innerTable);
 
-            return table != _innerTable
-                ? new EntityProjectionExpression(EntityType, table)
-                : this;
+                return table != _innerTable
+                    ? new EntityProjectionExpression(EntityType, table)
+                    : this;
+            }
+            else
+            {
+                var changed = false;
+                var newCache = new Dictionary<IProperty, ColumnExpression>();
+                foreach (var expression in _propertyExpressionsCache)
+                {
+                    var newExpression = (ColumnExpression)visitor.Visit(expression.Value);
+                    changed |= newExpression != expression.Value;
+
+                    newCache[expression.Key] = newExpression;
+                }
+
+                return changed
+                    ? new EntityProjectionExpression(EntityType, newCache)
+                    : this;
+            }
         }
 
         public IEntityType EntityType { get; }
 
         public ColumnExpression GetProperty(IProperty property)
         {
-            if (!_propertyExpressionCache.TryGetValue(property, out var expression))
+            if (!_propertyExpressionsCache.TryGetValue(property, out var expression))
             {
                 expression = new ColumnExpression(property, _innerTable);
-                _propertyExpressionCache[property] = expression;
+                _propertyExpressionsCache[property] = expression;
             }
 
             return expression;

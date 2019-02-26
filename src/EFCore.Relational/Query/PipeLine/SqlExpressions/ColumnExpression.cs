@@ -1,27 +1,35 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 {
     public class ColumnExpression : SqlExpression
     {
-        private readonly IProperty _property;
-
         public ColumnExpression(IProperty property, TableExpressionBase table)
             : base(property.ClrType, property.FindRelationalMapping(), false, true)
         {
-            _property = property;
+            Name = property.Relational().ColumnName;
             Table = table;
         }
 
-        private ColumnExpression(IProperty property, TableExpressionBase table, bool treatAsValue)
-            : base(property.ClrType, property.FindRelationalMapping(), false, treatAsValue)
+        public ColumnExpression(ProjectionExpression subqueryProjection, TableExpressionBase table)
+            : base(subqueryProjection.Type, subqueryProjection.SqlExpression.TypeMapping, false, true)
         {
-            _property = property;
+            Name = subqueryProjection.Alias;
+            Table = table;
+        }
+
+        private ColumnExpression(string name, TableExpressionBase table,
+            Type type, RelationalTypeMapping typeMapping, bool treatAsValue)
+            : base(type, typeMapping, false, treatAsValue)
+        {
+            Name = name;
             Table = table;
         }
 
@@ -30,16 +38,16 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var newTable = (TableExpressionBase)visitor.Visit(Table);
 
             return newTable != Table
-                ? new ColumnExpression(_property, newTable, ShouldBeValue)
+                ? new ColumnExpression(Name, newTable, Type, TypeMapping, ShouldBeValue)
                 : this;
         }
 
         public override SqlExpression ConvertToValue(bool treatAsValue)
         {
-            return new ColumnExpression(_property, Table, treatAsValue);
+            return new ColumnExpression(Name, Table, Type, TypeMapping, treatAsValue);
         }
 
-        public string Name => _property.Relational().ColumnName;
+        public string Name { get; }
         public TableExpressionBase Table { get; }
 
         public override bool Equals(object obj)
