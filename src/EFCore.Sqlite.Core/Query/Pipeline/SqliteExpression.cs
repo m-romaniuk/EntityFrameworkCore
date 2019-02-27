@@ -4,20 +4,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
     public static class SqliteExpression
     {
         public static SqlFunctionExpression Strftime(
             Type returnType,
-            string format,
-            Expression timestring,
-            IEnumerable<Expression> modifiers = null)
+            RelationalTypeMapping typeMapping,
+            SqlExpression formatExpression,
+            SqlExpression timestring,
+            IEnumerable<SqlExpression> modifiers = null)
         {
-            modifiers = modifiers ?? Enumerable.Empty<Expression>();
+            modifiers = modifiers ?? Enumerable.Empty<SqlExpression>();
 
             // If the inner call is another strftime then shortcut a double call
             if (timestring is SqlFunctionExpression rtrimFunction
@@ -38,10 +40,17 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Inter
             }
 
             return new SqlFunctionExpression(
+                null,
                 "strftime",
+                null,
+                new[]
+                {
+                        formatExpression,
+                        timestring
+                }.Concat(modifiers),
                 returnType,
-                new[] { Expression.Constant(format), timestring }.Concat(
-                    modifiers));
+                typeMapping,
+                false);
         }
     }
 }

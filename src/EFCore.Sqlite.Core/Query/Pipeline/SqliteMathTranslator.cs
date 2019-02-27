@@ -3,18 +3,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
-    /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
     public class SqliteMathTranslator : IMethodCallTranslator
     {
         private static readonly Dictionary<MethodInfo, string> _supportedMethods = new Dictionary<MethodInfo, string>
@@ -47,15 +42,59 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Inter
             { typeof(Math).GetMethod(nameof(Math.Round), new[] { typeof(double), typeof(int) }), "round" }
         };
 
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual Expression Translate(
-            MethodCallExpression methodCallExpression,
-            IDiagnosticsLogger<DbLoggerCategory.Query> logger)
-            => _supportedMethods.TryGetValue(methodCallExpression.Method, out var sqlFunctionName)
-                ? new SqlFunctionExpression(sqlFunctionName, methodCallExpression.Type, methodCallExpression.Arguments)
-                : null;
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+        private readonly ITypeMappingApplyingExpressionVisitor _typeMappingApplyingExpressionVisitor;
+
+        public SqliteMathTranslator(IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
+        {
+            _typeMappingSource = typeMappingSource;
+            _typeMappingApplyingExpressionVisitor = typeMappingApplyingExpressionVisitor;
+        }
+
+        public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
+        {
+            if (_supportedMethods.TryGetValue(method, out var sqlFunctionName))
+            {
+                RelationalTypeMapping typeMapping = null;
+                var newArguments = new List<SqlExpression>();
+
+                if (string.Equals(method.Name, nameof(Math.Round)))
+                {
+                    typeMapping = _typeMappingSource.FindMapping(typeof(double));
+                    newArguments.Add(_typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[0], typeMapping));
+                    if (arguments.Count == 2)
+                    {
+                        newArguments.Add(
+                            _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                                arguments[1], _typeMappingSource.FindMapping(typeof(int))));
+                    }
+                }
+                else
+                {
+                    typeMapping = (arguments.Count == 1
+                        ? ExpressionExtensions.InferTypeMapping(arguments[0])
+                        : ExpressionExtensions.InferTypeMapping(arguments[0], arguments[1]))
+                        ?? _typeMappingSource.FindMapping(arguments[0].Type);
+
+                    newArguments.Add(_typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[0], typeMapping));
+                    if (arguments.Count == 2)
+                    {
+                        newArguments.Add(_typeMappingApplyingExpressionVisitor.ApplyTypeMapping(arguments[1], typeMapping));
+                    }
+                }
+
+                return new SqlFunctionExpression(
+                    null,
+                    sqlFunctionName,
+                    null,
+                    newArguments,
+                    method.ReturnType,
+                    typeMapping,
+                    false);
+            }
+
+            return null;
+        }
     }
 }

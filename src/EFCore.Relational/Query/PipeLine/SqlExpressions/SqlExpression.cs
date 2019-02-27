@@ -17,25 +17,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             ShouldBeValue = treatAsValue;
         }
 
-        public SqlExpression ApplyTypeMapping(RelationalTypeMapping typeMapping)
-        {
-            if (typeMapping == null)
-            {
-                throw new InvalidOperationException("Cannot assign null typeMapping.");
-            }
-
-            TypeMapping = typeMapping;
-
-            return this;
-        }
-
-        public abstract SqlExpression ConvertToValue(bool treatAsValue);
-
         public override ExpressionType NodeType => ExpressionType.Extension;
         public override Type Type { get; }
         public bool IsCondition { get; }
         public bool ShouldBeValue { get; }
-        public RelationalTypeMapping TypeMapping { get; private set; }
+        public RelationalTypeMapping TypeMapping { get; }
+
+        public abstract SqlExpression ConvertToValue(bool treatAsValue);
 
         public override bool Equals(object obj)
             => obj != null

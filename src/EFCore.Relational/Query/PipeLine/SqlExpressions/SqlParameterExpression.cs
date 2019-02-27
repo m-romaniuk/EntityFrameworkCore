@@ -24,6 +24,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             _parameterExpression = parameterExpression;
         }
 
+        public SqlExpression ApplyTypeMapping(RelationalTypeMapping typeMapping)
+        {
+            return new SqlParameterExpression(_parameterExpression, typeMapping);
+        }
+
         protected override Expression VisitChildren(ExpressionVisitor visitor)
         {
             return this;

@@ -9,9 +9,26 @@ using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
-    public class SqlServerStringMethodTranslator : IMethodCallTranslator
+    public class SqliteMethodCallTranslatorProvider : RelationalMethodCallTranslatorProvider
+    {
+        public SqliteMethodCallTranslatorProvider(
+            IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
+            : base(typeMappingSource, typeMappingApplyingExpressionVisitor)
+        {
+            AddTranslators(
+                new IMethodCallTranslator[]
+                {
+                    new SqliteMathTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                    new SqliteDateTimeAddTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                    new SqliteStringMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                });
+        }
+    }
+
+    public class SqliteStringMethodTranslator : IMethodCallTranslator
     {
         private static readonly MethodInfo _indexOfMethodInfo
             = typeof(string).GetRuntimeMethod(nameof(string.IndexOf), new[] { typeof(string) });
@@ -26,13 +43,20 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
         private static readonly MethodInfo _isNullOrWhiteSpaceMethodInfo
             = typeof(string).GetRuntimeMethod(nameof(string.IsNullOrWhiteSpace), new[] { typeof(string) });
 
+
         // Method defined in netcoreapp2.0 only
         private static readonly MethodInfo _trimStartMethodInfoWithoutArgs
             = typeof(string).GetRuntimeMethod(nameof(string.TrimStart), Array.Empty<Type>());
+        private static readonly MethodInfo _trimStartMethodInfoWithCharArg
+            = typeof(string).GetRuntimeMethod(nameof(string.TrimStart), new[] { typeof(char) });
         private static readonly MethodInfo _trimEndMethodInfoWithoutArgs
             = typeof(string).GetRuntimeMethod(nameof(string.TrimEnd), Array.Empty<Type>());
+        private static readonly MethodInfo _trimEndMethodInfoWithCharArg
+            = typeof(string).GetRuntimeMethod(nameof(string.TrimEnd), new[] { typeof(char) });
         private static readonly MethodInfo _trimMethodInfoWithoutArgs
             = typeof(string).GetRuntimeMethod(nameof(string.Trim), Array.Empty<Type>());
+        private static readonly MethodInfo _trimMethodInfoWithCharArg
+            = typeof(string).GetRuntimeMethod(nameof(string.Trim), new[] { typeof(char) });
 
         // Method defined in netstandard2.0
         private static readonly MethodInfo _trimStartMethodInfoWithCharArrayArg
@@ -54,7 +78,8 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
         private readonly RelationalTypeMapping _intTypeMapping;
         private readonly RelationalTypeMapping _boolTypeMapping;
 
-        public SqlServerStringMethodTranslator(IRelationalTypeMappingSource typeMappingSource,
+        public SqliteStringMethodTranslator(
+            IRelationalTypeMappingSource typeMappingSource,
             ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
         {
             _typeMappingSource = typeMappingSource;
@@ -71,40 +96,23 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                 var stringTypeMapping = ExpressionExtensions.InferTypeMapping(instance, argument);
                 argument = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(argument, stringTypeMapping);
 
-                var charIndexExpression =
-                    new SqlBinaryExpression(
-                        ExpressionType.Subtract,
-                        new SqlFunctionExpression(
-                            null,
-                            "CHARINDEX",
-                            null,
-                            new[]
-                            {
-                                argument,
-                                _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(instance, stringTypeMapping)
-                            },
-                            method.ReturnType,
-                            _intTypeMapping,
-                            false),
-                        MakeSqlConstant(1),
+                return new SqlBinaryExpression(
+                    ExpressionType.Subtract,
+                    new SqlFunctionExpression(
+                        null,
+                        "instr",
+                        null,
+                        new[]
+                        {
+                            _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(instance, stringTypeMapping),
+                            argument
+                        },
                         method.ReturnType,
-                        _intTypeMapping);
-
-                return new CaseExpression(
-                    new[]
-                    {
-                        new CaseWhenClause(
-                            new SqlBinaryExpression(
-                                ExpressionType.Equal,
-                                argument,
-                                new SqlConstantExpression(Expression.Constant(string.Empty), stringTypeMapping),
-                                typeof(bool),
-                                _boolTypeMapping),
-                            MakeSqlConstant(0))
-                    },
-                    charIndexExpression,
-                    charIndexExpression.Type,
-                    charIndexExpression.TypeMapping);
+                        _intTypeMapping,
+                        false),
+                    MakeSqlConstant(1),
+                    method.ReturnType,
+                    _intTypeMapping);
             }
 
             if (_replaceMethodInfo.Equals(method))
@@ -119,7 +127,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
 
                 return new SqlFunctionExpression(
                     null,
-                    "REPLACE",
+                    "replace",
                     null,
                     new[]
                     {
@@ -137,7 +145,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             {
                 return new SqlFunctionExpression(
                     null,
-                    _toLowerMethodInfo.Equals(method) ? "LOWER" : "UPPER",
+                    _toLowerMethodInfo.Equals(method) ? "lower" : "upper",
                     null,
                     new[] { instance },
                     method.ReturnType,
@@ -149,7 +157,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             {
                 return new SqlFunctionExpression(
                     null,
-                    "SUBSTRING",
+                    "substr",
                     null,
                     new[]
                     {
@@ -178,20 +186,10 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                         ExpressionType.Equal,
                         new SqlFunctionExpression(
                             null,
-                            "LTRIM",
+                            "trim",
                             null,
                             new[] {
-                                new SqlFunctionExpression(
-                                    null,
-                                    "RTRIM",
-                                    null,
-                                    new[]
-                                    {
-                                        argument
-                                    },
-                                    argument.Type,
-                                    argument.TypeMapping,
-                                    false)
+                                argument
                             },
                             argument.Type,
                             argument.TypeMapping,
@@ -206,67 +204,24 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
             }
 
             if (_trimStartMethodInfoWithoutArgs?.Equals(method) == true
-                || (_trimStartMethodInfoWithCharArrayArg.Equals(method)
-                    // SqlServer LTRIM does not take arguments
-                    && ((arguments[0] as SqlConstantExpression)?.Value as Array)?.Length == 0))
+                || _trimStartMethodInfoWithCharArg?.Equals(method) == true
+                || _trimStartMethodInfoWithCharArrayArg.Equals(method))
             {
-                return new SqlFunctionExpression(
-                    null,
-                    "LTRIM",
-                    null,
-                    new[]
-                    {
-                        instance
-                    },
-                    instance.Type,
-                    instance.TypeMapping,
-                    false);
+                return ProcessTrimMethod(instance, arguments, "ltrim");
             }
 
             if (_trimEndMethodInfoWithoutArgs?.Equals(method) == true
-                || (_trimEndMethodInfoWithCharArrayArg.Equals(method)
-                    // SqlServer RTRIM does not take arguments
-                    && ((arguments[0] as SqlConstantExpression)?.Value as Array)?.Length == 0))
+                || _trimEndMethodInfoWithCharArg?.Equals(method) == true
+                || _trimEndMethodInfoWithCharArrayArg.Equals(method))
             {
-                return new SqlFunctionExpression(
-                    null,
-                    "RTRIM",
-                    null,
-                    new[]
-                    {
-                        instance
-                    },
-                    instance.Type,
-                    instance.TypeMapping,
-                    false);
+                return ProcessTrimMethod(instance, arguments, "rtrim");
             }
 
             if (_trimMethodInfoWithoutArgs?.Equals(method) == true
-                || (_trimMethodInfoWithCharArrayArg.Equals(method)
-                    // SqlServer LTRIM/RTRIM does not take arguments
-                    && ((arguments[0] as SqlConstantExpression)?.Value as Array)?.Length == 0))
+                || _trimMethodInfoWithCharArg?.Equals(method) == true
+                || _trimMethodInfoWithCharArrayArg.Equals(method))
             {
-                return new SqlFunctionExpression(
-                    null,
-                    "LTRIM",
-                    null,
-                    new[]
-                    {
-                        new SqlFunctionExpression(
-                            null,
-                            "RTRIM",
-                            null,
-                            new []
-                            {
-                                instance
-                            },
-                            instance.Type,
-                            instance.TypeMapping,
-                            false)
-                    },
-                    instance.Type,
-                    instance.TypeMapping,
-                    false);
+                return ProcessTrimMethod(instance, arguments, "trim");
             }
 
             if (_containsMethodInfo.Equals(method))
@@ -289,12 +244,12 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                         ExpressionType.GreaterThan,
                         new SqlFunctionExpression(
                             null,
-                            "CHARINDEX",
+                            "instr",
                             null,
                             new[]
                             {
-                                pattern,
-                                instance
+                                instance,
+                                pattern
                             },
                             typeof(int),
                             _intTypeMapping,
@@ -338,14 +293,15 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                             ExpressionType.Equal,
                             new SqlFunctionExpression(
                                 null,
-                                "LEFT",
+                                "substr",
                                 null,
                                 new[]
                                 {
                                     instance,
+                                    MakeSqlConstant(1),
                                     new SqlFunctionExpression(
                                         null,
-                                        "LEN",
+                                        "length",
                                         null,
                                         new [] { pattern },
                                         typeof(int),
@@ -384,19 +340,21 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                         ExpressionType.Equal,
                         new SqlFunctionExpression(
                             null,
-                            "RIGHT",
+                            "substr",
                             null,
                             new[]
                             {
                                 instance,
-                                new SqlFunctionExpression(
-                                    null,
-                                    "LEN",
-                                    null,
-                                    new [] { pattern },
-                                    typeof(int),
-                                    _intTypeMapping,
-                                    false)
+                                new SqlNegateExpression(
+                                    new SqlFunctionExpression(
+                                        null,
+                                        "length",
+                                        null,
+                                        new [] { pattern },
+                                        typeof(int),
+                                        _intTypeMapping,
+                                        false),
+                                    _intTypeMapping)
                             },
                             typeof(string),
                             stringTypeMapping,
@@ -414,6 +372,51 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
         private SqlExpression MakeSqlConstant(int value)
         {
             return new SqlConstantExpression(Expression.Constant(value), _intTypeMapping);
+        }
+
+        private SqlExpression ProcessTrimMethod(SqlExpression instance, IList<SqlExpression> arguments, string functionName)
+        {
+            var typeMapping = instance.TypeMapping;
+            if (typeMapping == null)
+            {
+                return null;
+            }
+
+            var sqlArguments = new List<SqlExpression> { instance };
+            if (arguments.Count == 1)
+            {
+                var constantValue = (arguments[0] as SqlConstantExpression)?.Value;
+                var charactersToTrim = new List<char>();
+
+                if (constantValue is char singleChar)
+                {
+                    charactersToTrim.Add(singleChar);
+                }
+                else if (constantValue is char[] charArray)
+                {
+                    charactersToTrim.AddRange(charArray);
+                }
+                else
+                {
+                    return null;
+                }
+
+                if (charactersToTrim.Count > 0)
+                {
+                    sqlArguments.Add(
+                        new SqlConstantExpression(Expression.Constant(new string(charactersToTrim.ToArray())),
+                        typeMapping));
+                }
+            }
+
+            return new SqlFunctionExpression(
+                null,
+                functionName,
+                null,
+                sqlArguments,
+                typeof(string),
+                typeMapping,
+                false);
         }
     }
 }

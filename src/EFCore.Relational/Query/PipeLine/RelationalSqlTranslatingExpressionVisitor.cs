@@ -54,10 +54,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 return _selectExpression.BindProperty(entityShaper.ValueBufferExpression, property);
             }
 
-            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
-                _memberTranslatorProvider.Translate(
-                    (SqlExpression)innerExpression, memberExpression.Member, memberExpression.Type),
-                null);
+            return TranslationFailed(memberExpression.Expression, innerExpression)
+                ? null
+                : _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    _memberTranslatorProvider.Translate(
+                        (SqlExpression)innerExpression, memberExpression.Member, memberExpression.Type),
+                    null);
         }
 
         protected override Expression VisitMethodCall(MethodCallExpression methodCallExpression)
@@ -71,18 +73,26 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
                     return _selectExpression.BindProperty(entityShaper.ValueBufferExpression, property);
                 }
+                else
+                {
+                    throw new InvalidOperationException();
+                }
             }
 
             var @object = (SqlExpression)Visit(methodCallExpression.Object);
+            var failed = TranslationFailed(methodCallExpression.Object, @object);
             var arguments = new SqlExpression[methodCallExpression.Arguments.Count];
             for (var i = 0; i < arguments.Length; i++)
             {
                 arguments[i] = (SqlExpression)Visit(methodCallExpression.Arguments[i]);
+                failed |= (methodCallExpression.Arguments[i] != null && arguments[i] == null);
             }
 
-            return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
-                _methodCallTranslatorProvider.Translate(@object, methodCallExpression.Method, arguments),
-                null);
+            return failed
+                ? null
+                : _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    _methodCallTranslatorProvider.Translate(@object, methodCallExpression.Method, arguments),
+                    null);
         }
 
         private static readonly MethodInfo _stringConcatObjectMethodInfo
@@ -95,6 +105,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             var left = (SqlExpression)Visit(binaryExpression.Left);
             var right = (SqlExpression)Visit(binaryExpression.Right);
+
+            if (TranslationFailed(binaryExpression.Left, left)
+                || TranslationFailed(binaryExpression.Right, right))
+            {
+                return null;
+            }
 
             if (binaryExpression.NodeType == ExpressionType.Add
                 && (_stringConcatObjectMethodInfo.Equals(binaryExpression.Method)
@@ -143,6 +159,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             var ifTrue = (SqlExpression)Visit(conditionalExpression.IfTrue);
             var ifFalse = (SqlExpression)Visit(conditionalExpression.IfFalse);
 
+            if (TranslationFailed(conditionalExpression.Test, test)
+                || TranslationFailed(conditionalExpression.IfTrue, ifTrue)
+                || TranslationFailed(conditionalExpression.IfFalse, ifFalse))
+            {
+                return null;
+            }
+
             var newExpression = new CaseExpression(
                 new[]
                 {
@@ -184,6 +207,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             var operand = Visit(unaryExpression.Operand);
 
+            if (TranslationFailed(unaryExpression.Operand, operand))
+            {
+                return null;
+            }
+
             // In certain cases EF.Property would have convert node around the source.
             if (operand is EntityShaperExpression
                 && unaryExpression.Type == typeof(object)
@@ -216,6 +244,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             return null;
+        }
+
+        private bool TranslationFailed(Expression original, Expression translation)
+        {
+            return original != null && translation == null;
         }
     }
 }

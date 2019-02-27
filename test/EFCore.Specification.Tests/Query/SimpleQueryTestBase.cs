@@ -1812,7 +1812,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_is_null(bool isAsync)
         {
@@ -1825,7 +1825,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_is_not_null(bool isAsync)
         {
@@ -1838,7 +1838,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 3);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_entity_equality_one_element_SingleOrDefault(bool isAsync)
         {
@@ -1850,7 +1850,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     select e1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_entity_equality_one_element_FirstOrDefault(bool isAsync)
         {
@@ -1862,7 +1862,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     select e1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_entity_equality_no_elements_SingleOrDefault(bool isAsync)
         {
@@ -1874,7 +1874,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     select e1);
         }
 
-        [ConditionalFact(Skip = "TaskList#13")]
+        [ConditionalFact(Skip = "TaskList#12")]
         public virtual void Where_query_composition_entity_equality_no_elements_Single()
         {
             using (var ctx = CreateContext())
@@ -1887,7 +1887,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_entity_equality_no_elements_FirstOrDefault(bool isAsync)
         {
@@ -1899,7 +1899,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                     select e1);
         }
 
-        [ConditionalFact(Skip = "TaskList#13")]
+        [ConditionalFact(Skip = "TaskList#12")]
         public virtual void Where_query_composition_entity_equality_multiple_elements_SingleOrDefault()
         {
             using (var ctx = CreateContext())
@@ -1912,7 +1912,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory(Skip = "TaskList#12")]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_query_composition_entity_equality_multiple_elements_FirstOrDefault(bool isAsync)
         {

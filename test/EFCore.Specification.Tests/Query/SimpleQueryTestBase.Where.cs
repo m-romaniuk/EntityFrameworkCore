@@ -606,7 +606,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 6);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_simple_shadow_subquery(bool isAsync)
         {
@@ -1247,7 +1247,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 10);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_primitive(bool isAsync)
         {
@@ -1256,7 +1256,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 es => es.Select(e => e.EmployeeID).Take(9).Where(i => i == 5));
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_primitive_tracked(bool isAsync)
         {
@@ -1266,7 +1266,7 @@ namespace Microsoft.EntityFrameworkCore.Query
                 entryCount: 1);
         }
 
-        [ConditionalTheory(Skip = "TaskList#13")]
+        [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual Task Where_primitive_tracked2(bool isAsync)
         {

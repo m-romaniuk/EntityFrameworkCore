@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
 
@@ -51,6 +52,9 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 case SqlFunctionExpression sqlFunctionExpression:
                     return VisitSqlFunction(sqlFunctionExpression);
 
+                case SqlNegateExpression sqlNegateExpression:
+                    return VisitSqlNegate(sqlNegateExpression);
+
                 case SqlNotExpression sqlNotExpression:
                     return VisitSqlNot(sqlNotExpression);
 
@@ -67,6 +71,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             return base.VisitExtension(extensionExpression);
         }
 
+        protected abstract Expression VisitSqlNegate(SqlNegateExpression sqlNegateExpression);
         protected abstract Expression VisitExists(ExistsExpression existsExpression);
         protected abstract Expression VisitIn(InExpression inExpression);
         protected abstract Expression VisitProjection(ProjectionExpression projectionExpression);

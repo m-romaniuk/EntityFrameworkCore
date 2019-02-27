@@ -62,6 +62,8 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             return _relationalCommandBuilder.Build();
         }
 
+        protected virtual IRelationalCommandBuilder Sql => _relationalCommandBuilder;
+
         protected override Expression VisitSqlFragment(SqlFragmentExpression sqlFragmentExpression)
         {
             _relationalCommandBuilder.Append(sqlFragmentExpression.Sql);
@@ -86,15 +88,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 _relationalCommandBuilder.Append("DISTINCT ");
             }
 
-            if (selectExpression.Limit != null
-                && selectExpression.Offset == null)
-            {
-                _relationalCommandBuilder.Append("TOP(");
-
-                Visit(selectExpression.Limit);
-
-                _relationalCommandBuilder.Append(") ");
-            }
+            GenerateTop(selectExpression);
 
             if (selectExpression.Projection.Any())
             {
@@ -129,24 +123,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 GenerateList(selectExpression.Orderings, e => Visit(e));
             }
 
-            if (selectExpression.Offset != null)
-            {
-                _relationalCommandBuilder.AppendLine()
-                    .Append("OFFSET ");
-
-                Visit(selectExpression.Offset);
-
-                _relationalCommandBuilder.Append(" ROWS");
-
-                if (selectExpression.Limit != null)
-                {
-                    _relationalCommandBuilder.Append(" FETCH NEXT ");
-
-                    Visit(selectExpression.Limit);
-
-                    _relationalCommandBuilder.Append(" ROWS ONLY");
-                }
-            }
+            GenerateLimitOffset(selectExpression);
 
             if (!string.IsNullOrEmpty(selectExpression.Alias))
             {
@@ -242,7 +219,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                     _relationalCommandBuilder.Append(")");
                 }
 
-                _relationalCommandBuilder.Append(_operatorMap[sqlBinaryExpression.OperatorType]);
+                _relationalCommandBuilder.Append(GenerateOperator(sqlBinaryExpression));
 
                 needsParenthesis = RequiresBrackets(sqlBinaryExpression.Right);
 
@@ -308,24 +285,6 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             return orderingExpression;
-        }
-
-        private void GenerateList<T>(
-            IReadOnlyList<T> items,
-            Action<T> generationAction,
-            Action<IRelationalCommandBuilder> joinAction = null)
-        {
-            joinAction = joinAction ?? (isb => isb.Append(", "));
-
-            for (var i = 0; i < items.Count; i++)
-            {
-                if (i > 0)
-                {
-                    joinAction(_relationalCommandBuilder);
-                }
-
-                generationAction(items[i]);
-            }
         }
 
         protected override Expression VisitLike(LikeExpression likeExpression)
@@ -524,6 +483,72 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             return inExpression;
+        }
+
+        protected override Expression VisitSqlNegate(SqlNegateExpression sqlNegateExpression)
+        {
+            _relationalCommandBuilder.Append("-");
+            Visit(sqlNegateExpression.Operand);
+
+            return sqlNegateExpression;
+        }
+
+        protected virtual string GenerateOperator(SqlBinaryExpression binaryExpression)
+        {
+            return _operatorMap[binaryExpression.OperatorType];
+        }
+
+        protected virtual void GenerateTop(SelectExpression selectExpression)
+        {
+            if (selectExpression.Limit != null
+                && selectExpression.Offset == null)
+            {
+                _relationalCommandBuilder.Append("TOP(");
+
+                Visit(selectExpression.Limit);
+
+                _relationalCommandBuilder.Append(") ");
+            }
+        }
+
+        protected virtual void GenerateLimitOffset(SelectExpression selectExpression)
+        {
+            if (selectExpression.Offset != null)
+            {
+                _relationalCommandBuilder.AppendLine()
+                    .Append("OFFSET ");
+
+                Visit(selectExpression.Offset);
+
+                _relationalCommandBuilder.Append(" ROWS");
+
+                if (selectExpression.Limit != null)
+                {
+                    _relationalCommandBuilder.Append(" FETCH NEXT ");
+
+                    Visit(selectExpression.Limit);
+
+                    _relationalCommandBuilder.Append(" ROWS ONLY");
+                }
+            }
+        }
+
+        private void GenerateList<T>(
+            IReadOnlyList<T> items,
+            Action<T> generationAction,
+            Action<IRelationalCommandBuilder> joinAction = null)
+        {
+            joinAction = joinAction ?? (isb => isb.Append(", "));
+
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (i > 0)
+                {
+                    joinAction(_relationalCommandBuilder);
+                }
+
+                generationAction(items[i]);
+            }
         }
     }
 }

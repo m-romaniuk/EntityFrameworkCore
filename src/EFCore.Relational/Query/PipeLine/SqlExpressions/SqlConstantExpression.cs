@@ -22,6 +22,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             _constantExpression = constantExpression;
         }
 
+        public SqlExpression ApplyTypeMapping(RelationalTypeMapping typeMapping)
+        {
+            return new SqlConstantExpression(_constantExpression, typeMapping);
+        }
+
         protected override Expression VisitChildren(ExpressionVisitor visitor)
         {
             return this;

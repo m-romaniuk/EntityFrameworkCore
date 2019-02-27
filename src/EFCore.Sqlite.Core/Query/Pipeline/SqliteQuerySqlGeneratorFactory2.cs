@@ -1,28 +1,28 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
-    public class QuerySqlGeneratorFactory2 : IQuerySqlGeneratorFactory2
+    public class SqliteQuerySqlGeneratorFactory2 : QuerySqlGeneratorFactory2
     {
         private readonly IRelationalCommandBuilderFactory _commandBuilderFactory;
         private readonly ISqlGenerationHelper _sqlGenerationHelper;
 
-        public QuerySqlGeneratorFactory2(
+        public SqliteQuerySqlGeneratorFactory2(
             IRelationalCommandBuilderFactory commandBuilderFactory,
             ISqlGenerationHelper sqlGenerationHelper)
+            : base(commandBuilderFactory, sqlGenerationHelper)
         {
             _commandBuilderFactory = commandBuilderFactory;
             _sqlGenerationHelper = sqlGenerationHelper;
         }
 
-        public virtual QuerySqlGenerator Create()
+        public override QuerySqlGenerator Create()
         {
-            return new QuerySqlGenerator(
-                _commandBuilderFactory,
-                _sqlGenerationHelper);
+            return new SqliteQuerySqlGenerator(_commandBuilderFactory, _sqlGenerationHelper);
         }
     }
 }

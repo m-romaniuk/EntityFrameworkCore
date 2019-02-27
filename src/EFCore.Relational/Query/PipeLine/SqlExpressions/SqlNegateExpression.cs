@@ -1,33 +1,22 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-using System;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.EntityFrameworkCore.Utilities;
 
 namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 {
-    public class SqlNotExpression : SqlExpression
+    public class SqlNegateExpression : SqlExpression
     {
-        public SqlNotExpression(
-            SqlExpression operand,
-            RelationalTypeMapping typeMapping)
-            : base(typeof(bool), typeMapping, true, false)
+        public SqlNegateExpression(SqlExpression operand, RelationalTypeMapping typeMapping)
+            : base(operand.Type, typeMapping, false, true)
         {
-            Check.NotNull(operand, nameof(operand));
-
-            Operand = operand.ConvertToValue(false);
+            Operand = operand.ConvertToValue(true);
         }
 
-        private SqlNotExpression(
-            SqlExpression operand,
-            RelationalTypeMapping typeMapping,
-            bool treatAsValue)
-            : base(typeof(bool), typeMapping, true, treatAsValue)
+        private SqlNegateExpression(SqlExpression operand, RelationalTypeMapping typeMapping, bool treatAsValue)
+            : base(operand.Type, typeMapping, false, treatAsValue)
         {
-            Check.NotNull(operand, nameof(operand));
-
             Operand = operand;
         }
 
@@ -38,13 +27,13 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
             var operand = (SqlExpression)visitor.Visit(Operand);
 
             return operand != Operand
-                ? new SqlNotExpression(operand, TypeMapping, ShouldBeValue)
+                ? new SqlNegateExpression(operand, TypeMapping, ShouldBeValue)
                 : this;
         }
 
         public override SqlExpression ConvertToValue(bool treatAsValue)
         {
-            return new SqlNotExpression(Operand, TypeMapping, treatAsValue);
+            return new SqlNegateExpression(Operand, TypeMapping, treatAsValue);
         }
 
         public override bool Equals(object obj)
