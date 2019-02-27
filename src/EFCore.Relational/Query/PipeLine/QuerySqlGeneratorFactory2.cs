@@ -3,7 +3,7 @@
 
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class QuerySqlGeneratorFactory2 : IQuerySqlGeneratorFactory2
     {

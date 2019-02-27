@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public class InMemoryTableExpression : Expression
     {

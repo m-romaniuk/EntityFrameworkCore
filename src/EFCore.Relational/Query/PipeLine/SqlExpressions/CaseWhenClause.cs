@@ -1,14 +1,14 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
 {
     public class CaseWhenClause
     {
         public CaseWhenClause(SqlExpression test, SqlExpression result)
         {
-            Test = test.ConvertToValue(false);
-            Result = result.ConvertToValue(true);
+            Test = test;
+            Result = result;
         }
 
         public SqlExpression Test { get; }

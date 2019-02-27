@@ -4,7 +4,7 @@
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
 {
     public class SqlNegateExpression : SqlExpression
     {

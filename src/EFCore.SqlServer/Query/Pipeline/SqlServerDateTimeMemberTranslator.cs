@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline

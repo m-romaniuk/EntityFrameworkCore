@@ -5,7 +5,7 @@ using System;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Metadata;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public class EntityShaperExpression : Expression
     {

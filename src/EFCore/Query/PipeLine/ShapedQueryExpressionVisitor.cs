@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
     {

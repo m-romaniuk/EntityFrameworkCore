@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
@@ -34,9 +34,7 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline
                         new SqlCastExpression(
                             new SqlConstantExpression(Expression.Constant(false), _boolTypeMapping),
                             typeof(bool),
-                            _boolTypeMapping),
-                        typeof(bool),
-                        _boolTypeMapping);
+                            _boolTypeMapping));
                 }
 
                 if (!sqlExpression.IsCondition && !sqlExpression.ShouldBeValue)

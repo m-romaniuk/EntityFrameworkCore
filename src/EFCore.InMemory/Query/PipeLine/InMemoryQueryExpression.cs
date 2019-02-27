@@ -10,10 +10,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public class InMemoryQueryExpression : Expression
     {

@@ -3,8 +3,8 @@
 
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Pipeline

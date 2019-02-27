@@ -6,7 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Internal;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public abstract class EntityQueryableExpressionVisitor2 : ExpressionVisitor
     {

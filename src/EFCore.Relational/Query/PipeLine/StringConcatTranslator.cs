@@ -4,9 +4,9 @@
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class StringConcatTranslator : IMethodCallTranslator
     {

@@ -12,11 +12,11 @@ using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class RelationalShapedQueryCompilingExpressionVisitor : ShapedQueryCompilingExpressionVisitor
     {
@@ -235,7 +235,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                         getMethod,
                         indexExpression);
 
-                //valueExpression = mapping.CustomizeDataReaderExpression(valueExpression);
+                valueExpression = typeMapping.CustomizeDataReaderExpression(valueExpression);
 
                 var converter = typeMapping.Converter;
 

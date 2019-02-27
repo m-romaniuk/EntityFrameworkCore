@@ -5,38 +5,61 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
 {
     public class CaseExpression : SqlExpression
     {
+        private readonly List<CaseWhenClause> _whenClauses = new List<CaseWhenClause>();
+
         public CaseExpression(
-            IEnumerable<CaseWhenClause> whenClauses, SqlExpression elseResult,
-            Type type, RelationalTypeMapping typeMapping)
-            // TODO: actually infer conditional & type
-            : base(type, typeMapping, false, true)
+            SqlExpression operand,
+            params CaseWhenClause[] whenClauses)
+            : this(operand, whenClauses, null)
         {
-            WhenClauses = whenClauses;
-            ElseResult = elseResult.ConvertToValue(true);
+        }
+
+        public CaseExpression(
+            IReadOnlyList<CaseWhenClause> whenClauses,
+            SqlExpression elseResult)
+            : this(null, whenClauses, elseResult)
+        {
         }
 
         private CaseExpression(
-            IEnumerable<CaseWhenClause> whenClauses,
-            SqlExpression elseResult,
-            Type type,
-            RelationalTypeMapping typeMapping,
-            bool treatAsValue)
-            // TODO: actually infer conditional & type
-            : base(type, typeMapping, false, treatAsValue)
+            SqlExpression operand,
+            IReadOnlyList<CaseWhenClause> whenClauses,
+            SqlExpression elseResult)
+            : base(whenClauses[0].Result.Type, whenClauses[0].Result.TypeMapping, false, true)
         {
-            WhenClauses = whenClauses;
+            Operand = operand?.ConvertToValue(true);
+            var testValue = operand != null;
+            foreach (var whenClause in whenClauses)
+            {
+                _whenClauses.Add(
+                    new CaseWhenClause(
+                        whenClause.Test.ConvertToValue(testValue),
+                        whenClause.Result.ConvertToValue(true)));
+            }
+            ElseResult = elseResult?.ConvertToValue(true);
+        }
+
+        private CaseExpression(
+            SqlExpression operand,
+            IReadOnlyList<CaseWhenClause> whenClauses,
+            SqlExpression elseResult,
+            bool treatAsValue)
+            : base(whenClauses[0].Result.Type, whenClauses[0].Result.TypeMapping, false, treatAsValue)
+        {
+            Operand = operand;
+            _whenClauses.AddRange(whenClauses);
             ElseResult = elseResult;
         }
 
         protected override Expression VisitChildren(ExpressionVisitor visitor)
         {
-            var changed = false;
+            var operand = (SqlExpression)visitor.Visit(Operand);
+            var changed = operand != Operand;
             var whenClauses = new List<CaseWhenClause>();
             foreach (var whenClause in WhenClauses)
             {
@@ -45,24 +68,27 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
 
                 if (test != whenClause.Test || result != whenClause.Result)
                 {
-                    changed = true;
+                    changed |= true;
                     whenClauses.Add(new CaseWhenClause(test, result));
                 }
             }
 
             var elseResult = (SqlExpression)visitor.Visit(ElseResult);
+            changed |= elseResult != ElseResult;
 
-            return changed || elseResult != ElseResult
-                ? new CaseExpression(whenClauses, elseResult, Type, TypeMapping, ShouldBeValue)
+
+            return changed
+                ? new CaseExpression(Operand, whenClauses, elseResult, ShouldBeValue)
                 : this;
         }
 
         public override SqlExpression ConvertToValue(bool treatAsValue)
         {
-            return new CaseExpression(WhenClauses, ElseResult, Type, TypeMapping, treatAsValue);
+            return new CaseExpression(Operand, WhenClauses, ElseResult, treatAsValue);
         }
 
-        public IEnumerable<CaseWhenClause> WhenClauses { get; }
+        public SqlExpression Operand { get; }
+        public IReadOnlyList<CaseWhenClause> WhenClauses => _whenClauses;
         public SqlExpression ElseResult { get; }
 
         public override bool Equals(object obj)

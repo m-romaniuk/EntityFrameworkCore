@@ -7,7 +7,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Utilities;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public static class InMemoryLinqOperatorProvider
     {

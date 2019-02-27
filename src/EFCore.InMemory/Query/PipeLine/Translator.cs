@@ -7,9 +7,9 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore.Extensions.Internal;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Query.Internal;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public class InMemoryExpressionTranslatingExpressionVisitor : ExpressionVisitor
     {

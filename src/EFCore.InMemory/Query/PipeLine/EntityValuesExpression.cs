@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public class EntityValuesExpression : Expression
     {

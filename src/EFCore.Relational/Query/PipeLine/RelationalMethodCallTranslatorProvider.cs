@@ -4,20 +4,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class RelationalMethodCallTranslatorProvider : IMethodCallTranslatorProvider
     {
-        private readonly List<IMethodCallTranslator> _methodCallTranslators = new List<IMethodCallTranslator>();
+        private readonly List<IMethodCallTranslator> _plugins = new List<IMethodCallTranslator>();
+        private readonly List<IMethodCallTranslator> _translators = new List<IMethodCallTranslator>();
 
         public RelationalMethodCallTranslatorProvider(
             IRelationalTypeMappingSource typeMappingSource,
-            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor,
+            IEnumerable<IMethodCallTranslatorPlugin> plugins)
         {
-            _methodCallTranslators.AddRange(
+            _plugins.AddRange(plugins.SelectMany(p => p.Translators));
+
+            _translators.AddRange(
                 new IMethodCallTranslator[] {
                     new EqualsTranslator(typeMappingSource),
                     new ContainsTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
@@ -27,12 +31,12 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
         {
-            return _methodCallTranslators
+            return _plugins.Concat(_translators)
                 .Select(t => t.Translate(instance, method, arguments))
                 .FirstOrDefault(t => t != null);
         }
 
         protected virtual void AddTranslators(IEnumerable<IMethodCallTranslator> translators)
-            => _methodCallTranslators.InsertRange(0, translators);
+            => _translators.InsertRange(0, translators);
     }
 }

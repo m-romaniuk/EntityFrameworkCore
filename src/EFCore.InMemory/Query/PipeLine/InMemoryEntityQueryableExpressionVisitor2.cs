@@ -3,9 +3,9 @@
 
 using System;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public class InMemoryEntityQueryableExpressionVisitor2 : EntityQueryableExpressionVisitor2
     {

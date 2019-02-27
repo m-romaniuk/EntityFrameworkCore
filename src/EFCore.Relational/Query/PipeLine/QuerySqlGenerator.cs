@@ -7,10 +7,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class QuerySqlGenerator : SqlExpressionVisitor
     {
@@ -234,8 +234,6 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 {
                     _relationalCommandBuilder.Append(")");
                 }
-
-
             }
 
             return sqlBinaryExpression;
@@ -306,11 +304,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
         {
             _relationalCommandBuilder.Append("CASE");
 
-            //if (caseExpression.Operand != null)
-            //{
-            //    _relationalCommandBuilder.Append(" ");
-            //    Visit(caseExpression.Operand);
-            //}
+            if (caseExpression.Operand != null)
+            {
+                _relationalCommandBuilder.Append(" ");
+                Visit(caseExpression.Operand);
+            }
 
             using (_relationalCommandBuilder.Indent())
             {
@@ -320,7 +318,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                         .AppendLine()
                         .Append("WHEN ");
                     Visit(whenClause.Test);
-                    _relationalCommandBuilder.Append("THEN ");
+                    _relationalCommandBuilder.Append(" THEN ");
                     Visit(whenClause.Result);
                 }
 

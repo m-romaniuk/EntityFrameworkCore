@@ -3,9 +3,9 @@
 
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
 
-namespace Microsoft.EntityFrameworkCore.InMemory.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.InMemory.Query.Pipeline
 {
     public class InMemoryProjectionBindingExpressionVisitor : ExpressionVisitor
     {

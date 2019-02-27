@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public class ReplacingExpressionVisitor : ExpressionVisitor
     {

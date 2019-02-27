@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVisitor
     {

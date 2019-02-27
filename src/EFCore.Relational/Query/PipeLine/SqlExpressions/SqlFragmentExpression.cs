@@ -3,7 +3,7 @@
 
 using System.Linq.Expressions;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions
 {
     public class SqlFragmentExpression : SqlExpression
     {

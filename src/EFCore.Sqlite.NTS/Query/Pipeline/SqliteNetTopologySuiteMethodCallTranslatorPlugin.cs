@@ -2,10 +2,11 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
     /// <summary>
     ///     <para>
@@ -21,10 +22,26 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Inter
     /// </summary>
     public class SqliteNetTopologySuiteMethodCallTranslatorPlugin : IMethodCallTranslatorPlugin
     {
+        private readonly IEnumerable<IMethodCallTranslator> _translators;
+
+        public SqliteNetTopologySuiteMethodCallTranslatorPlugin(
+            IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
+        {
+            _translators = new IMethodCallTranslator[]
+            {
+                new SqliteGeometryMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqliteGeometryCollectionMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqliteLineStringMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor),
+                new SqlitePolygonMethodTranslator(typeMappingSource, typeMappingApplyingExpressionVisitor)
+            };
+        }
+
+
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public virtual IEnumerable<IMethodCallTranslator> Translators { get; } = new IMethodCallTranslator[] { new SqliteGeometryMethodTranslator(), new SqliteGeometryCollectionMethodTranslator(), new SqliteLineStringMethodTranslator(), new SqlitePolygonMethodTranslator() };
+        public virtual IEnumerable<IMethodCallTranslator> Translators => _translators;
     }
 }

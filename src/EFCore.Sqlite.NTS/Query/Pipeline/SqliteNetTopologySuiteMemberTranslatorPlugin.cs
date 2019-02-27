@@ -2,10 +2,11 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
     /// <summary>
     ///     <para>
@@ -20,11 +21,27 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Inter
     /// </summary>
     public class SqliteNetTopologySuiteMemberTranslatorPlugin : IMemberTranslatorPlugin
     {
+        private readonly IEnumerable<IMemberTranslator> _translators;
+
+        public SqliteNetTopologySuiteMemberTranslatorPlugin(IRelationalTypeMappingSource typeMappingSource)
+        {
+            _translators = new IMemberTranslator[]
+            {
+                new SqliteCurveMemberTranslator(typeMappingSource),
+                new SqliteGeometryMemberTranslator(typeMappingSource),
+                new SqliteGeometryCollectionMemberTranslator(typeMappingSource),
+                new SqliteLineStringMemberTranslator(typeMappingSource),
+                new SqliteMultiCurveMemberTranslator(typeMappingSource),
+                new SqlitePointMemberTranslator(typeMappingSource),
+                new SqlitePolygonMemberTranslator(typeMappingSource)
+            };
+        }
+
+
         /// <summary>
         ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public virtual IEnumerable<IMemberTranslator> Translators { get; }
-            = new IMemberTranslator[] { new SqliteCurveMemberTranslator(), new SqliteGeometryMemberTranslator(), new SqliteGeometryCollectionMemberTranslator(), new SqliteLineStringMemberTranslator(), new SqliteMultiCurveMemberTranslator(), new SqlitePointMemberTranslator(), new SqlitePolygonMemberTranslator() };
+        public virtual IEnumerable<IMemberTranslator> Translators => _translators;
     }
 }

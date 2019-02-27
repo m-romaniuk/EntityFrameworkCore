@@ -5,17 +5,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class RelationalMemberTranslatorProvider : IMemberTranslatorProvider
     {
-        private readonly List<IMemberTranslator> _memberTranslators = new List<IMemberTranslator>();
+        private readonly List<IMemberTranslator> _plugins = new List<IMemberTranslator>();
+        private readonly List<IMemberTranslator> _translators = new List<IMemberTranslator>();
 
-        public RelationalMemberTranslatorProvider()
+        public RelationalMemberTranslatorProvider(IEnumerable<IMemberTranslatorPlugin> plugins)
         {
-            _memberTranslators
+            _plugins.AddRange(plugins.SelectMany(p => p.Translators));
+            _translators
                 .AddRange(
                 new[]
                 {
@@ -25,10 +27,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
         public SqlExpression Translate(SqlExpression instance, MemberInfo member, Type returnType)
         {
-            return _memberTranslators.Select(t => t.Translate(instance, member, returnType)).FirstOrDefault(t => t != null);
+            return _plugins.Concat(_translators)
+                .Select(t => t.Translate(instance, member, returnType)).FirstOrDefault(t => t != null);
         }
 
         protected virtual void AddTranslators(IEnumerable<IMemberTranslator> translators)
-            => _memberTranslators.InsertRange(0, translators);
+            => _translators.InsertRange(0, translators);
     }
 }

@@ -4,7 +4,7 @@
 using System;
 using System.Linq.Expressions;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public class ProjectionBindingExpression : Expression
     {

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Microsoft.EntityFrameworkCore.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Query.Pipeline
 {
     public class ProjectionMember
     {

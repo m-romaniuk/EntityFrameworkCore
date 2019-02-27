@@ -2,14 +2,15 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore.Extensions.Internal;
-using Microsoft.EntityFrameworkCore.Query.PipeLine;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
     {
@@ -167,13 +168,11 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
             }
 
             var newExpression = new CaseExpression(
-                new[]
+                new List<CaseWhenClause>
                 {
                     new CaseWhenClause(test, ifTrue)
                 },
-                ifFalse,
-                conditionalExpression.Type,
-                null);
+                ifFalse);
 
             return _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(newExpression, null);
         }

@@ -4,10 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Relational.Query.PipeLine.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
 using Microsoft.EntityFrameworkCore.Storage;
 
-namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
+namespace Microsoft.EntityFrameworkCore.Relational.Query.Pipeline
 {
     public class TypeMappingApplyingExpressionVisitor : ITypeMappingApplyingExpressionVisitor
     {
@@ -121,9 +121,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
 
             return new CaseExpression(
                 whenClauses,
-                elseResult,
-                caseExpression.Type,
-                inferredTypeMapping);
+                elseResult);
         }
 
         protected virtual SqlExpression ApplyTypeMappingOnSqlBinary(
@@ -180,7 +178,7 @@ namespace Microsoft.EntityFrameworkCore.Relational.Query.PipeLine
                 case ExpressionType.Modulo:
                 case ExpressionType.Coalesce:
                     {
-                        var inferredTypeMapping = InferTypeMappingForBinary(left, right);
+                        var inferredTypeMapping = typeMapping ?? InferTypeMappingForBinary(left, right);
 
                         left = ApplyTypeMapping(left, inferredTypeMapping);
                         right = ApplyTypeMapping(right, inferredTypeMapping);

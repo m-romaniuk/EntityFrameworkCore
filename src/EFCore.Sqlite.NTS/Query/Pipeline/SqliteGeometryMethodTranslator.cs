@@ -7,17 +7,13 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using GeoAPI.Geometries;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Query.Expressions;
-using Microsoft.EntityFrameworkCore.Query.ExpressionTranslators;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline;
+using Microsoft.EntityFrameworkCore.Relational.Query.Pipeline.SqlExpressions;
+using Microsoft.EntityFrameworkCore.Storage;
 using NetTopologySuite.Geometries;
 
-namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Internal
+namespace Microsoft.EntityFrameworkCore.Sqlite.Query.Pipeline
 {
-    /// <summary>
-    ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-    ///     directly from your code. This API may change or be removed in future releases.
-    /// </summary>
     public class SqliteGeometryMethodTranslator : IMethodCallTranslator
     {
         private static readonly IDictionary<MethodInfo, string> _methodToFunctionName = new Dictionary<MethodInfo, string>
@@ -52,48 +48,105 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.ExpressionTranslators.Inter
         private static readonly MethodInfo _getGeometryN = typeof(IGeometry).GetRuntimeMethod(nameof(IGeometry.GetGeometryN), new[] { typeof(int) });
         private static readonly MethodInfo _isWithinDistance = typeof(IGeometry).GetRuntimeMethod(nameof(IGeometry.IsWithinDistance), new[] { typeof(IGeometry), typeof(double) });
 
-        /// <summary>
-        ///     This API supports the Entity Framework Core infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        public virtual Expression Translate(
-            MethodCallExpression methodCallExpression,
-            IDiagnosticsLogger<DbLoggerCategory.Query> logger)
+        private readonly IRelationalTypeMappingSource _typeMappingSource;
+        private readonly ITypeMappingApplyingExpressionVisitor _typeMappingApplyingExpressionVisitor;
+
+        public SqliteGeometryMethodTranslator(
+            IRelationalTypeMappingSource typeMappingSource,
+            ITypeMappingApplyingExpressionVisitor typeMappingApplyingExpressionVisitor)
         {
-            var method = methodCallExpression.Method.OnInterface(typeof(IGeometry));
+            _typeMappingSource = typeMappingSource;
+            _typeMappingApplyingExpressionVisitor = typeMappingApplyingExpressionVisitor;
+        }
+
+        public SqlExpression Translate(SqlExpression instance, MethodInfo method, IList<SqlExpression> arguments)
+        {
+            method = method.OnInterface(typeof(IGeometry));
             if (_methodToFunctionName.TryGetValue(method, out var functionName))
             {
-                Expression newExpression = new SqlFunctionExpression(
-                    functionName,
-                    methodCallExpression.Type,
-                    new[] { methodCallExpression.Object }.Concat(methodCallExpression.Arguments));
-                if (methodCallExpression.Type == typeof(bool))
+                if (method.DeclaringType == typeof(Geometry))
                 {
-                    newExpression = new CaseExpression(
-                        new CaseWhenClause(
-                            Expression.Not(new IsNullExpression(methodCallExpression.Object)),
-                            newExpression));
+                    instance = instance is SqlCastExpression sqlCast
+                        ? sqlCast.Operand
+                        : instance;
                 }
 
-                return newExpression;
+                instance = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    instance, _typeMappingSource.FindMapping(instance.Type));
+
+                SqlExpression translation = new SqlFunctionExpression(
+                    null,
+                    functionName,
+                    null,
+                    new[] { instance }.Concat(
+                        arguments.Select(e => _typeMappingApplyingExpressionVisitor
+                            .ApplyTypeMapping(e, _typeMappingSource.FindMapping(e.Type)))),
+                    method.ReturnType,
+                    _typeMappingSource.FindMapping(method.ReturnType),
+                    false);
+
+                if (method.ReturnType == typeof(bool))
+                {
+                    translation = new CaseExpression(
+                        new[]
+                        {
+                            new CaseWhenClause(
+                                new SqlNullExpression(instance, true, _typeMappingSource.FindMapping(typeof(bool))),
+                                translation)
+                        },
+                        null);
+                }
+
+                return translation;
             }
 
             if (Equals(method, _getGeometryN))
             {
+                instance = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    instance, _typeMappingSource.FindMapping(instance.Type));
+
                 return new SqlFunctionExpression(
+                    null,
                     "GeometryN",
-                    methodCallExpression.Type,
-                    new[] { methodCallExpression.Object, Expression.Add(methodCallExpression.Arguments[0], Expression.Constant(1)) });
+                    null,
+                    new[] {
+                        instance,
+                        _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                            new SqlBinaryExpression(
+                                ExpressionType.Add,
+                                arguments[0],
+                                new SqlConstantExpression(Expression.Constant(1), null),
+                                typeof(int),
+                                null),
+                            _typeMappingSource.FindMapping(typeof(int)))
+                    },
+                    method.ReturnType,
+                    _typeMappingSource.FindMapping(method.ReturnType),
+                    false);
             }
 
             if (Equals(method, _isWithinDistance))
             {
-                return Expression.LessThanOrEqual(
+                instance = _typeMappingApplyingExpressionVisitor.ApplyTypeMapping(
+                    instance, _typeMappingSource.FindMapping(instance.Type));
+
+                var updatedArguments = arguments.Select(e => _typeMappingApplyingExpressionVisitor
+                            .ApplyTypeMapping(e, _typeMappingSource.FindMapping(e.Type)))
+                            .ToList();
+
+                return new SqlBinaryExpression(
+                    ExpressionType.LessThanOrEqual,
                     new SqlFunctionExpression(
+                        null,
                         "Distance",
+                        null,
+                        new[] { instance, updatedArguments[0] },
                         typeof(double),
-                        new[] { methodCallExpression.Object, methodCallExpression.Arguments[0] }),
-                    methodCallExpression.Arguments[1]);
+                        _typeMappingSource.FindMapping(typeof(double)),
+                        false),
+                    updatedArguments[1],
+                    typeof(bool),
+                    _typeMappingSource.FindMapping(typeof(bool)));
             }
 
             return null;
